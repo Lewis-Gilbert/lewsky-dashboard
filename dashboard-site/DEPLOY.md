@@ -18,3 +18,9 @@ Everything here is a static site. There is no build step.
 - Folder layout: index.html, css/styles.css, js/app.js, js/theme-init.js. Keep the folders next to index.html.
 - To update the page later, replace the changed files and redeploy.
 - setup-sync.sql is not part of the website. Run it once in your Supabase SQL Editor if you want sync.
+
+## Installing it as an app
+- Android / Chrome / Edge: open the live address, then use Settings > Install Lewsky (or the install icon in the address bar).
+- iPhone: open it in Safari, tap Share, then Add to Home Screen.
+- The app opens offline with your saved tasks and notes. Weather and radar need a connection.
+- If you change any file later, edit CACHE in sw.js (for example lewsky-v2) so installed copies pick up the update.

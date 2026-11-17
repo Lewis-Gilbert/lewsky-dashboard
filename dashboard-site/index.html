@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lewsky</title>
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0B7A47">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lewsky">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,6 +56,11 @@
           </form>
           <button class="btn quiet small" type="button" id="signOut">Sign out</button>
           <p class="set-note">Sign out clears your name on this device and shows the welcome page. Your tasks, notes and links stay.</p>
+        </div>
+        <div id="installBox" hidden>
+          <p class="set-h">Install app</p>
+          <button class="btn small" type="button" id="installBtn">Install Lewsky</button>
+          <p class="set-note" id="installNote">Opens in its own window with an app icon.</p>
         </div>
         <div>
           <p class="set-h" id="hTemp">Temperature</p>
@@ -297,5 +310,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="js/app.js"></script>
+<script src="js/pwa.js"></script>
 </body>
 </html>
