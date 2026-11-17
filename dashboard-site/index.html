@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Dashboard</title>
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="js/theme-init.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<main class="welcome" id="welcome" aria-labelledby="welcomeTitle">
+  <form class="welcome-card" id="welcomeForm" autocomplete="off">
+    <div class="welcome-ico" id="welcomeIco" aria-hidden="true"></div>
+    <p class="welcome-kicker" id="welcomeTime">Welcome</p>
+    <h1 id="welcomeTitle">What should I call you?</h1>
+    <p class="welcome-sub">Your dashboard for weather, tasks, links and notes. Everything stays in this browser.</p>
+    <label class="sr" for="welcomeName">Your name</label>
+    <input class="field" id="welcomeName" type="text" maxlength="30" placeholder="Your name" autocomplete="given-name" enterkeyhint="go">
+    <p class="welcome-err" id="welcomeErr" role="alert"></p>
+    <button class="btn" type="submit">Create my dashboard</button>
+  </form>
+</main>
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="clock" id="clock"><span id="clockMain">--:--</span><span class="sec" id="clockSec"></span></p>
+      <div class="hello">
+        <span class="greet-ico" id="greetIco" aria-hidden="true"></span>
+        <h1 id="greeting">Hello</h1>
+        <p id="today"></p>
+      </div>
+    </div>
+    <div class="tools">
+      <button class="icon-btn" id="palBtn" type="button" aria-label="Settings" aria-expanded="false" aria-controls="palMenu" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <div class="pal-menu" id="palMenu" role="group" aria-label="Settings" hidden>
+        <div>
+          <p class="set-h">Your name</p>
+          <form class="name-row" id="nameForm">
+            <input class="field" id="nameInput" type="text" maxlength="30" aria-label="Your name" autocomplete="given-name">
+            <button class="btn quiet small" type="submit">Save</button>
+          </form>
+          <button class="btn quiet small" type="button" id="signOut">Sign out</button>
+          <p class="set-note">Sign out clears your name on this device and shows the welcome page. Your tasks, notes and links stay.</p>
+        </div>
+        <div>
+          <p class="set-h" id="hTemp">Temperature</p>
+          <div class="seg" role="group" aria-labelledby="hTemp">
+            <button type="button" data-unit="c" aria-pressed="true">°C</button>
+            <button type="button" data-unit="f" aria-pressed="false">°F</button>
+          </div>
+        </div>
+        <div>
+          <p class="set-h" id="hClock">Clock</p>
+          <div class="seg" role="group" aria-labelledby="hClock">
+            <button type="button" data-h12="true" aria-pressed="true">12-hour</button>
+            <button type="button" data-h12="false" aria-pressed="false">24-hour</button>
+          </div>
+        </div>
+        <div>
+          <p class="set-h" id="hAcc">Accent color</p>
+          <div class="swatches" role="group" aria-labelledby="hAcc">
+            <button class="swatch" type="button" data-accent="teal"   style="background:#0B7A47" aria-label="Emerald"   aria-pressed="false" title="Emerald"></button>
+            <button class="swatch" type="button" data-accent="blue"   style="background:#2563C9" aria-label="Blue"   aria-pressed="false" title="Blue"></button>
+            <button class="swatch" type="button" data-accent="violet" style="background:#6D45C4" aria-label="Violet" aria-pressed="false" title="Violet"></button>
+            <button class="swatch" type="button" data-accent="rose"   style="background:#BE3A62" aria-label="Rose"   aria-pressed="false" title="Rose"></button>
+            <button class="swatch" type="button" data-accent="amber"  style="background:#C77A0A" aria-label="Amber"  aria-pressed="false" title="Amber"></button>
+          </div>
+        </div>
+        <div>
+          <p class="set-h">Backup</p>
+          <div class="backup-row">
+            <button class="btn quiet small" type="button" id="exportBtn">Save backup</button>
+            <button class="btn quiet small" type="button" id="importBtn">Restore backup</button>
+          </div>
+          <input id="importFile" type="file" accept="application/json,.json" class="sr" tabindex="-1" aria-label="Choose a backup file">
+          <div class="restore" id="restoreAsk" hidden>
+            <p>Replace your current tasks, notes and links with this backup?</p>
+            <div>
+              <button class="btn small" type="button" id="restoreYes">Restore</button>
+              <button class="btn quiet small" type="button" id="restoreNo">Cancel</button>
+            </div>
+          </div>
+          <p class="set-note" id="backupMsg" aria-live="polite"></p>
+        </div>
+        <div>
+          <p class="set-h">Sync across devices</p>
+          <div id="syncOffBox" class="sync-form">
+            <p class="set-note">Uses your own free Supabase project. The newest version of your tasks, notes, links and settings wins on each device. Save a backup first.</p>
+            <label for="syncUrl">Project URL<input class="field" id="syncUrl" type="url" placeholder="https://yourproject.supabase.co" autocomplete="off" spellcheck="false"></label>
+            <label for="syncKey">Public key<input class="field" id="syncKey" type="text" placeholder="sb_publishable_… or anon key" autocomplete="off" spellcheck="false"></label>
+            <button class="btn small" type="button" id="syncTurnOn">Turn on sync</button>
+            <details>
+              <summary>Already set up on another device?</summary>
+              <label for="syncPaste">Setup code<input class="field" id="syncPaste" type="text" placeholder="dash1.…" autocomplete="off" spellcheck="false"></label>
+              <button class="btn quiet small" type="button" id="syncJoin">Connect this device</button>
+            </details>
+            <p class="set-note" id="syncMsg" aria-live="polite"></p>
+          </div>
+          <div id="syncOnBox" class="sync-form" hidden>
+            <p class="set-note" id="syncStatus" aria-live="polite">Sync is on.</p>
+            <div class="backup-row">
+              <button class="btn quiet small" type="button" id="syncNow">Sync now</button>
+              <button class="btn quiet small" type="button" id="syncTurnOff">Turn off</button>
+            </div>
+            <label for="syncCode">Setup code for your other devices. Keep it private: anyone with it can read your data.<input class="field" id="syncCode" type="text" readonly></label>
+            <button class="btn quiet small" type="button" id="syncCopy">Copy setup code</button>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn" id="theme" type="button" aria-label="Switch to dark theme" title="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="alert" id="alert" role="status" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>
+    <div class="alert-text" id="alertText"></div>
+    <button class="alert-x" id="alertX" type="button" aria-label="Dismiss alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <main>
+    <!-- Weather hero -->
+    <section class="card hero" id="sky" data-sky="clear" aria-labelledby="place">
+      <canvas id="fx" aria-hidden="true"></canvas>
+      <div class="shade" aria-hidden="true"></div>
+      <div class="hero-in">
+        <div class="where">
+          <h2 class="place" id="place">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <span id="placeName">Locating…</span>
+          </h2>
+          <div class="sky-actions">
+            <button class="chip" type="button" id="useGps">Use my location</button>
+            <button class="chip" type="button" id="changeCity" aria-expanded="false" aria-controls="search">Change city</button>
+          </div>
+        </div>
+
+        <form class="search" id="search" hidden>
+          <label class="sr" for="q">City name</label>
+          <input id="q" type="search" placeholder="Search for a city" autocomplete="off">
+          <button type="submit">Search</button>
+        </form>
+
+        <p class="status" id="status" role="status" aria-live="polite">Finding your location…</p>
+
+        <div class="hero-body" id="heroBody">
+          <div class="col-now">
+            <div class="now" id="now" hidden>
+              <div class="big-icon" id="nowIcon" aria-hidden="true"></div>
+              <div>
+                <p class="temp" id="temp"></p>
+                <p class="cond" id="cond"></p>
+              </div>
+            </div>
+            <ul class="meta" id="meta"></ul>
+            <div class="sun" id="sun" hidden>
+              <div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19h18M7 19a5 5 0 0 1 10 0M12 4v5M9.5 6.5L12 4l2.5 2.5"/></svg>
+                <span><small>Sunrise</small><strong id="sunrise"></strong></span>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19h18M7 19a5 5 0 0 1 10 0M12 4v5M9.5 6.5L12 9l2.5-2.5"/></svg>
+                <span><small>Sunset</small><strong id="sunset"></strong></span>
+              </div>
+            </div>
+            <p class="updated" id="updated"></p>
+          </div>
+
+          <div class="col-fc" id="forecast" hidden>
+            <h3>Next 24 hours</h3>
+            <div class="hours-wrap">
+              <ul class="hours" id="hours" tabindex="0" aria-label="Hourly forecast, scrolls sideways"></ul>
+            </div>
+            <h3>Next 7 days</h3>
+            <div id="days"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rain radar -->
+    <section class="card radar" id="radarCard" aria-labelledby="radarTitle" hidden>
+      <div class="card-head">
+        <h2 id="radarTitle"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path class="sweep" d="M12 12l6-6"/></svg></span>Rain radar</h2>
+        <div class="radar-ctl">
+          <span class="state" id="radarTime" aria-live="polite">Loading…</span>
+          <button class="btn quiet small" type="button" id="radarPlay" disabled>Play</button>
+        </div>
+      </div>
+      <div id="radarMap" role="region" aria-label="Rain radar map around your location"></div>
+      <p class="hint">Blue shows rain over the last hour, centered on your weather location. Radar data from RainViewer.</p>
+    </section>
+
+    <div class="grid2">
+      <!-- To-do -->
+      <section class="card t-todo" aria-labelledby="todoTitle">
+        <div class="todo-head">
+          <h2 id="todoTitle"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M8 12.5l3 3 5-6"/></svg></span>To-do</h2>
+          <div class="progress">
+            <span id="ringLabel">No tasks yet</span>
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle class="track" cx="32" cy="32" r="27"/><circle class="bar" id="ringBar" cx="32" cy="32" r="27" stroke-dasharray="169.65" stroke-dashoffset="169.65"/></svg>
+              <span class="ring-text" id="ringText">0%</span>
+            </div>
+          </div>
+        </div>
+        <form class="add" id="addForm">
+          <label class="sr" for="newTask">New task</label>
+          <input class="field" id="newTask" type="text" placeholder="Add a task" autocomplete="off" maxlength="200">
+          <button class="btn" type="submit">Add</button>
+          <div class="opts">
+            <label>Due <input class="field" id="newDue" type="date"></label>
+            <label>Priority
+              <select class="field" id="newPri">
+                <option value="none">None</option>
+                <option value="low">Low</option>
+                <option value="med">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+          </div>
+        </form>
+        <ul class="tasks" id="tasks"></ul>
+        <p class="empty" id="empty" hidden>Nothing on your list. Add your first task above.</p>
+        <div class="tasks-foot" id="tasksFoot" hidden>
+          <span id="left"></span>
+          <button type="button" id="clearDone" hidden>Clear completed</button>
+        </div>
+      </section>
+
+      <!-- Focus timer -->
+      <section class="card focus t-focus" id="focusCard" aria-labelledby="focusTitle">
+        <div class="card-head"><h2 id="focusTitle"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5"/></svg></span>Focus timer</h2></div>
+        <div class="modes" role="group" aria-label="Timer mode">
+          <button type="button" data-mode="focus" aria-pressed="true">Focus</button>
+          <button type="button" data-mode="short" aria-pressed="false">Short break</button>
+          <button type="button" data-mode="long" aria-pressed="false">Long break</button>
+        </div>
+        <div class="dial">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" id="dialBar" cx="60" cy="60" r="54" stroke-dasharray="339.29" stroke-dashoffset="0"/></svg>
+          <div class="dial-in"><div class="dial-time" id="dialTime">25:00</div><div class="dial-sub" id="dialSub">Focus</div></div>
+        </div>
+        <div class="dial-actions">
+          <button class="btn" type="button" id="dialStart">Start</button>
+          <button class="btn quiet" type="button" id="dialReset">Reset</button>
+        </div>
+        <p class="hint" id="focusCount"></p>
+        <p class="sr" id="focusLive" aria-live="polite"></p>
+      </section>
+
+      <!-- Links -->
+      <section class="card t-links" aria-labelledby="linksTitle">
+        <div class="card-head">
+          <h2 id="linksTitle"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg></span>Daily links</h2>
+          <button class="btn quiet small" type="button" id="editLinks">Edit</button>
+        </div>
+        <div id="linksView">
+          <form class="jump" id="jumpForm" role="search">
+            <label class="sr" for="jump">Search Google or jump to a link</label>
+            <input class="field" id="jump" type="search" placeholder="Search Google or jump to a link" autocomplete="off">
+            <button class="btn" type="submit">Go</button>
+          </form>
+          <p class="jump-hint" id="jumpHint" aria-live="polite"></p>
+          <div id="groups"></div>
+          <p class="hint" id="linksHint">These are placeholders. Choose Edit to add your own.</p>
+        </div>
+        <div id="linksEditor" hidden></div>
+        <datalist id="groupList"></datalist>
+      </section>
+
+      <!-- Notes -->
+      <section class="card notes t-notes" aria-labelledby="notesTitle">
+        <div class="card-head">
+          <h2 id="notesTitle"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z"/><path d="M14.5 6.5l3 3"/></svg></span>Quick notes</h2>
+          <span class="state" id="noteState" aria-live="polite">Saved</span>
+        </div>
+        <label class="sr" for="notes">Quick notes</label>
+        <textarea class="field" id="notes" placeholder="Jot something down. It saves as you type."></textarea>
+      </section>
+    </div>
+  </main>
+
+  <footer class="quote">
+    <blockquote><p id="quoteText"></p></blockquote>
+    <cite id="quoteBy"></cite>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

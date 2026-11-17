@@ -1,0 +1,1815 @@
+ <!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Dashboard</title>
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+/* Apply saved theme and accent before first paint to avoid a flash */
+(function () {
+  var root = document.documentElement;
+  try {
+    var saved = JSON.parse(localStorage.getItem('dash.theme'));
+    var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    var acc = JSON.parse(localStorage.getItem('dash.accent'));
+    if (acc) root.setAttribute('data-accent', acc);
+  } catch (e) {
+    root.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+<style>
+:root {
+  --bg: #EEF2F5;
+  --surface: #FFFFFF;
+  --ink: #14212B;
+  --muted: #566774;
+  --line: #D9E1E7;
+  --accent: #1F6F5C;
+  --accent-ink: #FFFFFF;
+  --focus: #1F6FBF;
+  --danger: #B3402F;
+  --warn-bg: #FFF1D6;
+  --warn-line: #E2AC45;
+  --warn-ink: #5C3B00;
+  --tod: transparent;
+  --display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius: 18px;
+}
+:root[data-theme="dark"] {
+  --bg: #0C141B;
+  --surface: #141F28;
+  --ink: #E7EEF3;
+  --muted: #93A4B1;
+  --line: #25343F;
+  --accent: #4FC3A1;
+  --accent-ink: #06231B;
+  --focus: #7FB8F5;
+  --danger: #F0907F;
+  --warn-bg: #3A2D10;
+  --warn-line: #8A6A22;
+  --warn-ink: #FFD98A;
+}
+/* Accent colors. Each has a light and a dark value. */
+:root[data-accent="blue"]   { --accent: #2563C9; --accent-ink: #FFFFFF; }
+:root[data-accent="violet"] { --accent: #6D45C4; --accent-ink: #FFFFFF; }
+:root[data-accent="rose"]   { --accent: #BE3A62; --accent-ink: #FFFFFF; }
+:root[data-accent="amber"]  { --accent: #9A5B00; --accent-ink: #FFFFFF; }
+:root[data-theme="dark"][data-accent="blue"]   { --accent: #7FAEF5; --accent-ink: #08203F; }
+:root[data-theme="dark"][data-accent="violet"] { --accent: #B49CF2; --accent-ink: #1E1240; }
+:root[data-theme="dark"][data-accent="rose"]   { --accent: #F2A0B8; --accent-ink: #3F0D1D; }
+:root[data-theme="dark"][data-accent="amber"]  { --accent: #F2B84B; --accent-ink: #2E1B00; }
+
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: linear-gradient(180deg, var(--tod) 0, transparent 620px);
+  background-repeat: no-repeat;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background-color .25s ease, color .25s ease;
+}
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+.page { max-width: 1180px; margin: 0 auto; padding: 24px 16px 40px; }
+
+/* ---------- Header ---------- */
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.clock {
+  font-family: var(--display); font-weight: 800; letter-spacing: -0.04em; line-height: .95;
+  font-size: clamp(56px, 11vw, 112px); margin: 0; font-variant-numeric: tabular-nums;
+}
+.clock .sec { font-size: .34em; font-weight: 600; letter-spacing: 0; color: var(--muted); margin-left: 6px; }
+.hello { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.hello h1 { font-family: var(--display); font-weight: 600; font-size: clamp(22px, 3.4vw, 30px); letter-spacing: -0.01em; margin: 0; }
+.hello p { margin: 0; color: var(--muted); }
+.tools { display: flex; gap: 10px; position: relative; flex: none; }
+
+.icon-btn {
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  display: grid; place-items: center; cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.icon-btn:hover { border-color: var(--muted); }
+.icon-btn svg { width: 22px; height: 22px; }
+:root[data-theme="light"] .icon-sun { display: none; }
+:root[data-theme="dark"] .icon-moon { display: none; }
+
+/* Settings panel */
+.pal-menu {
+  position: absolute; right: 0; top: 52px; z-index: 20; width: 290px; max-width: calc(100vw - 32px);
+  display: grid; gap: 16px; padding: 16px; max-height: calc(100vh - 90px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.18);
+}
+.set-h { margin: 0 0 6px; font-weight: 600; font-size: 14px; }
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; font: inherit; font-size: 14px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 10px; min-height: 38px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.swatches { display: flex; gap: 10px; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; }
+.swatch[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 3px; }
+.backup-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.restore p { margin: 10px 0 8px; font-size: 14px; }
+.restore div { display: flex; gap: 6px; }
+.set-note { margin: 6px 0 0; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+.sync-form { display: grid; gap: 8px; margin-top: 8px; }
+.sync-form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.sync-form .field { min-height: 38px; padding: 6px 10px; font-size: 13px; width: 100%; }
+.sync-form details { font-size: 14px; }
+.sync-form summary { cursor: pointer; padding: 4px 0; }
+.sync-form details .field { margin: 6px 0; }
+
+/* Rain radar */
+.radar { margin-top: 20px; }
+.radar-ctl { display: flex; align-items: center; gap: 12px; }
+#radarMap { height: 360px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); isolation: isolate; }
+#radarMap .msg { padding: 24px; color: var(--muted); }
+.leaflet-container { font-family: var(--body); }
+.leaflet-container a { color: inherit; }
+@media (max-width: 520px) { #radarMap { height: 280px; } }
+
+/* ---------- Alert ---------- */
+.alert {
+  display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding: 12px 14px;
+  background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); border-radius: 14px;
+}
+.alert > svg { width: 22px; height: 22px; flex: none; margin-top: 1px; }
+.alert-text { flex: 1; min-width: 0; }
+.alert-text p { margin: 0; font-weight: 500; }
+.alert-text p + p { margin-top: 2px; }
+.alert-x { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; display: grid; place-items: center; }
+.alert-x:hover { background: rgba(0,0,0,.08); }
+.alert-x svg { width: 18px; height: 18px; }
+
+/* ---------- Cards ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; transition: background-color .25s ease, border-color .25s ease; }
+.card h2 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; min-height: 40px; }
+.state { color: var(--muted); font-size: 14px; }
+
+.field {
+  font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; min-height: 44px; min-width: 0;
+}
+.field::placeholder { color: var(--muted); }
+.btn {
+  font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; padding: 0 18px;
+  background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px;
+}
+.btn:hover { filter: brightness(1.07); }
+.btn.quiet { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.quiet:hover { border-color: var(--muted); filter: none; }
+.btn.small { min-height: 36px; padding: 0 14px; font-size: 14px; }
+.hint { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+
+/* ---------- Weather hero ---------- */
+.hero {
+  --sky-a: #1A5FA8; --sky-b: #2F77BD;
+  position: relative; overflow: hidden; border: 0; color: #fff; padding: 0;
+  background: linear-gradient(165deg, var(--sky-a), var(--sky-b));
+  transition: background .8s ease; text-shadow: 0 1px 10px rgba(0,0,0,.22);
+}
+.hero[data-sky="partly"] { --sky-a: #225E9F; --sky-b: #3F7DB8; }
+.hero[data-sky="cloud"]  { --sky-a: #46586A; --sky-b: #5E7083; }
+.hero[data-sky="fog"]    { --sky-a: #4B5761; --sky-b: #66727C; }
+.hero[data-sky="rain"]   { --sky-a: #34445A; --sky-b: #4F647C; }
+.hero[data-sky="snow"]   { --sky-a: #4A627A; --sky-b: #667E96; }
+.hero[data-sky="storm"]  { --sky-a: #262942; --sky-b: #444366; }
+.hero[data-night="1"]                    { --sky-a: #0B1730; --sky-b: #25416C; }
+.hero[data-night="1"][data-sky="cloud"]  { --sky-a: #19212E; --sky-b: #374456; }
+.hero[data-night="1"][data-sky="fog"]    { --sky-a: #1C242C; --sky-b: #3D4853; }
+.hero[data-night="1"][data-sky="rain"]   { --sky-a: #121A25; --sky-b: #2B3849; }
+.hero[data-night="1"][data-sky="snow"]   { --sky-a: #1C2836; --sky-b: #405268; }
+.hero[data-night="1"][data-sky="storm"]  { --sky-a: #11112A; --sky-b: #2C2B4A; }
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.2)); pointer-events: none; }
+.hero-in { position: relative; z-index: 2; padding: 26px; }
+.hero :focus-visible { outline-color: #fff; }
+
+.where { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.place { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.place svg { width: 20px; height: 20px; flex: none; }
+.sky-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  font: inherit; font-size: 14px; font-weight: 500; color: #fff; cursor: pointer; text-shadow: none;
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.4);
+  border-radius: 999px; padding: 6px 14px; min-height: 36px;
+}
+.chip:hover { background: rgba(255,255,255,.28); }
+
+.search { display: flex; gap: 8px; margin-top: 14px; max-width: 460px; }
+.search input {
+  flex: 1; min-width: 0; font: inherit; color: #fff; background: rgba(0,0,0,.25); text-shadow: none;
+  border: 1px solid rgba(255,255,255,.45); border-radius: 12px; padding: 10px 14px; min-height: 44px;
+}
+.search input::placeholder { color: rgba(255,255,255,.8); }
+.search button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 0 18px; min-height: 44px; cursor: pointer; background: #fff; color: #14212B; text-shadow: none; }
+
+.status { margin: 18px 0 0; min-height: 1.5em; }
+.status.error { background: rgba(0,0,0,.3); padding: 12px 14px; border-radius: 12px; max-width: 640px; }
+
+.hero-body { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 28px; margin-top: 6px; align-items: start; }
+@media (max-width: 900px) { .hero-body { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
+.col-now, .col-fc { min-width: 0; }
+
+.now { display: flex; align-items: center; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+.now .big-icon { width: 84px; height: 84px; flex: none; filter: drop-shadow(0 2px 8px rgba(0,0,0,.2)); }
+.temp { font-family: var(--display); font-weight: 800; font-size: clamp(88px, 15vw, 150px); line-height: .9; letter-spacing: -0.05em; margin: 0; }
+.temp sup { font-size: .36em; font-weight: 600; vertical-align: top; position: relative; top: .3em; margin-left: 2px; letter-spacing: 0; }
+.cond { margin: 8px 0 0; font-size: 22px; font-weight: 500; }
+.meta { display: flex; gap: 8px 22px; flex-wrap: wrap; margin: 14px 0 0; padding: 0; list-style: none; font-size: 15px; }
+.sun { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.28); }
+.sun div { display: flex; align-items: center; gap: 10px; }
+.sun svg { width: 30px; height: 30px; flex: none; }
+.sun small { display: block; font-size: 13px; opacity: .92; line-height: 1.2; }
+.sun strong { font-weight: 600; font-size: 17px; line-height: 1.3; }
+.updated { margin: 16px 0 0; font-size: 13px; opacity: .92; }
+
+.col-fc h3 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 14px 0 6px; }
+.hours-wrap { position: relative; }
+.hours {
+  display: flex; gap: 6px; list-style: none; margin: 0; padding: 2px 2px 12px; overflow-x: auto;
+  scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.5) transparent;
+  -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, #000 90%, transparent);
+}
+.hours li { flex: none; width: 64px; text-align: center; padding: 10px 4px; border-radius: 14px; background: rgba(255,255,255,.13); scroll-snap-align: start; display: grid; gap: 4px; justify-items: center; }
+.hours li.now-h { background: rgba(255,255,255,.28); }
+.hours .t { font-size: 13px; }
+.hours svg { width: 26px; height: 26px; }
+.hours .v { font-weight: 600; font-size: 16px; }
+.hours .r { font-size: 12px; min-height: 1.2em; }
+
+.day { display: grid; grid-template-columns: 56px 28px 40px 36px 1fr 36px; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.18); font-size: 15px; }
+.day:last-child { border-bottom: 0; }
+.day svg { width: 24px; height: 24px; }
+.day .rain { font-size: 13px; }
+.day .lo { text-align: right; opacity: .9; }
+.day .hi { font-weight: 600; }
+.range { position: relative; height: 6px; border-radius: 6px; background: rgba(255,255,255,.24); }
+.range span { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: #fff; }
+@media (max-width: 480px) { .hero-in { padding: 20px 16px; } .day { grid-template-columns: 48px 24px 38px 30px 1fr 30px; gap: 6px; font-size: 14px; } }
+
+/* ---------- Lower grid ---------- */
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: stretch; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* To-do */
+.todo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.progress { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; }
+.ring-wrap { position: relative; width: 48px; height: 48px; }
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 6; }
+.ring .track { stroke: var(--line); }
+.ring .bar { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
+.ring-text { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--ink); }
+
+.add { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 6px; }
+.add .opts { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.add .opts .field { min-height: 38px; padding: 6px 10px; font-size: 14px; }
+.add .opts label { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+
+.tasks { list-style: none; margin: 0; padding: 0; }
+.task { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--line); background: var(--surface); border-radius: 10px; }
+.task:last-child { border-bottom: 0; }
+.task.dragging { box-shadow: 0 8px 24px rgba(0,0,0,.2); border-bottom-color: transparent; position: relative; z-index: 3; }
+.grip { flex: none; width: 28px; height: 36px; border: 0; background: transparent; color: var(--muted); cursor: grab; display: grid; place-items: center; touch-action: none; border-radius: 8px; }
+.grip:hover { color: var(--ink); background: var(--bg); }
+.grip svg { width: 16px; height: 16px; }
+.task input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex: none;
+  width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--muted);
+  background: transparent; cursor: pointer; display: grid; place-items: center; margin: 0;
+}
+.task input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+.task input[type="checkbox"]:checked::after {
+  content: ''; width: 5px; height: 10px; border: solid var(--accent-ink); border-width: 0 2.5px 2.5px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+.task-body { flex: 1; min-width: 0; }
+.task label { display: block; overflow-wrap: anywhere; cursor: pointer; }
+.task.done label { color: var(--muted); text-decoration: line-through; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+.tags:empty { display: none; }
+.tag { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tag.overdue { color: var(--danger); border-color: var(--danger); }
+.tag.today { color: var(--accent); border-color: var(--accent); }
+.tag.p-high { background: #B3402F; border-color: #B3402F; color: #fff; }
+.tag.p-med { background: #E8B04B; border-color: #E8B04B; color: #3A2600; }
+.tag.p-low { background: transparent; color: var(--muted); }
+.del { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.del:hover { color: var(--danger); background: var(--bg); }
+.del svg { width: 18px; height: 18px; }
+.tasks-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 14px; }
+.tasks-foot button { font: inherit; font-size: 14px; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 6px 2px; }
+.tasks-foot button:hover { color: var(--ink); }
+.empty { color: var(--muted); margin: 6px 0 0; }
+
+/* Focus timer */
+.focus { display: flex; flex-direction: column; }
+.modes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.modes button { font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
+.modes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.dial { position: relative; width: 210px; height: 210px; margin: 6px auto 4px; }
+.dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dial circle { fill: none; stroke-width: 8; }
+.dial .track { stroke: var(--line); }
+.dial .bar { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+.dial-in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.dial-time { font-family: var(--display); font-weight: 800; font-size: 50px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.dial-sub { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.dial-actions { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.dial-actions .btn { min-width: 96px; }
+.focus .hint { text-align: center; margin-top: 14px; }
+
+/* Links */
+.jump { display: flex; gap: 8px; margin-bottom: 4px; }
+.jump .field { flex: 1; }
+.jump-hint { min-height: 1.4em; margin: 6px 2px 12px; font-size: 14px; color: var(--muted); }
+.group + .group { margin-top: 14px; }
+.group h3 { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); margin: 0 0 8px; }
+.links { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+.links a {
+  display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink);
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
+  transition: border-color .15s ease, transform .15s ease;
+}
+.links a:hover { border-color: var(--accent); transform: translateY(-1px); }
+.links a.match { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.badge { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); overflow: hidden; }
+.badge img { width: 24px; height: 24px; display: block; }
+.badge.letter { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-family: var(--display); font-weight: 800; }
+.link-text { min-width: 0; display: grid; }
+.link-text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-text small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edit-row { display: grid; grid-template-columns: 1fr 1.5fr 1fr 36px; gap: 8px; margin-bottom: 8px; align-items: center; }
+.edit-row .field { width: 100%; }
+@media (max-width: 620px) {
+  .edit-row { grid-template-columns: 1fr 1fr 36px; }
+  .edit-row .url { grid-column: 1 / -1; order: 4; }
+}
+.edit-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Notes */
+.notes { display: flex; flex-direction: column; }
+.notes textarea { flex: 1; min-height: 220px; resize: vertical; width: 100%; line-height: 1.55; }
+
+/* Quote */
+.quote { margin: 32px auto 0; max-width: 640px; text-align: center; }
+.quote blockquote { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(19px, 2.6vw, 24px); line-height: 1.35; }
+.quote cite { display: block; margin-top: 8px; color: var(--muted); font-style: normal; font-size: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="clock" id="clock"><span id="clockMain">--:--</span><span class="sec" id="clockSec"></span></p>
+      <div class="hello">
+        <h1 id="greeting">Hello</h1>
+        <p id="today"></p>
+      </div>
+    </div>
+    <div class="tools">
+      <button class="icon-btn" id="palBtn" type="button" aria-label="Settings" aria-expanded="false" aria-controls="palMenu" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <div class="pal-menu" id="palMenu" role="group" aria-label="Settings" hidden>
+        <div>
+          <p class="set-h" id="hTemp">Temperature</p>
+          <div class="seg" role="group" aria-labelledby="hTemp">
+            <button type="button" data-unit="c" aria-pressed="true">°C</button>
+            <button type="button" data-unit="f" aria-pressed="false">°F</button>
+          </div>
+        </div>
+        <div>
+          <p class="set-h" id="hClock">Clock</p>
+          <div class="seg" role="group" aria-labelledby="hClock">
+            <button type="button" data-h12="true" aria-pressed="true">12-hour</button>
+            <button type="button" data-h12="false" aria-pressed="false">24-hour</button>
+          </div>
+        </div>
+        <div>
+          <p class="set-h" id="hAcc">Accent color</p>
+          <div class="swatches" role="group" aria-labelledby="hAcc">
+            <button class="swatch" type="button" data-accent="teal"   style="background:#1F6F5C" aria-label="Teal"   aria-pressed="false" title="Teal"></button>
+            <button class="swatch" type="button" data-accent="blue"   style="background:#2563C9" aria-label="Blue"   aria-pressed="false" title="Blue"></button>
+            <button class="swatch" type="button" data-accent="violet" style="background:#6D45C4" aria-label="Violet" aria-pressed="false" title="Violet"></button>
+            <button class="swatch" type="button" data-accent="rose"   style="background:#BE3A62" aria-label="Rose"   aria-pressed="false" title="Rose"></button>
+            <button class="swatch" type="button" data-accent="amber"  style="background:#C77A0A" aria-label="Amber"  aria-pressed="false" title="Amber"></button>
+          </div>
+        </div>
+        <div>
+          <p class="set-h">Backup</p>
+          <div class="backup-row">
+            <button class="btn quiet small" type="button" id="exportBtn">Save backup</button>
+            <button class="btn quiet small" type="button" id="importBtn">Restore backup</button>
+          </div>
+          <input id="importFile" type="file" accept="application/json,.json" class="sr" tabindex="-1" aria-label="Choose a backup file">
+          <div class="restore" id="restoreAsk" hidden>
+            <p>Replace your current tasks, notes and links with this backup?</p>
+            <div>
+              <button class="btn small" type="button" id="restoreYes">Restore</button>
+              <button class="btn quiet small" type="button" id="restoreNo">Cancel</button>
+            </div>
+          </div>
+          <p class="set-note" id="backupMsg" aria-live="polite"></p>
+        </div>
+        <div>
+          <p class="set-h">Sync across devices</p>
+          <div id="syncOffBox" class="sync-form">
+            <p class="set-note">Uses your own free Supabase project. The newest version of your tasks, notes, links and settings wins on each device. Save a backup first.</p>
+            <label for="syncUrl">Project URL<input class="field" id="syncUrl" type="url" placeholder="https://yourproject.supabase.co" autocomplete="off" spellcheck="false"></label>
+            <label for="syncKey">Public key<input class="field" id="syncKey" type="text" placeholder="sb_publishable_… or anon key" autocomplete="off" spellcheck="false"></label>
+            <button class="btn small" type="button" id="syncTurnOn">Turn on sync</button>
+            <details>
+              <summary>Already set up on another device?</summary>
+              <label for="syncPaste">Setup code<input class="field" id="syncPaste" type="text" placeholder="dash1.…" autocomplete="off" spellcheck="false"></label>
+              <button class="btn quiet small" type="button" id="syncJoin">Connect this device</button>
+            </details>
+            <p class="set-note" id="syncMsg" aria-live="polite"></p>
+          </div>
+          <div id="syncOnBox" class="sync-form" hidden>
+            <p class="set-note" id="syncStatus" aria-live="polite">Sync is on.</p>
+            <div class="backup-row">
+              <button class="btn quiet small" type="button" id="syncNow">Sync now</button>
+              <button class="btn quiet small" type="button" id="syncTurnOff">Turn off</button>
+            </div>
+            <label for="syncCode">Setup code for your other devices. Keep it private: anyone with it can read your data.<input class="field" id="syncCode" type="text" readonly></label>
+            <button class="btn quiet small" type="button" id="syncCopy">Copy setup code</button>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn" id="theme" type="button" aria-label="Switch to dark theme" title="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="alert" id="alert" role="status" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>
+    <div class="alert-text" id="alertText"></div>
+    <button class="alert-x" id="alertX" type="button" aria-label="Dismiss alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <main>
+    <!-- Weather hero -->
+    <section class="card hero" id="sky" data-sky="clear" aria-labelledby="place">
+      <canvas id="fx" aria-hidden="true"></canvas>
+      <div class="shade" aria-hidden="true"></div>
+      <div class="hero-in">
+        <div class="where">
+          <h2 class="place" id="place">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <span id="placeName">Locating…</span>
+          </h2>
+          <div class="sky-actions">
+            <button class="chip" type="button" id="useGps">Use my location</button>
+            <button class="chip" type="button" id="changeCity" aria-expanded="false" aria-controls="search">Change city</button>
+          </div>
+        </div>
+
+        <form class="search" id="search" hidden>
+          <label class="sr" for="q">City name</label>
+          <input id="q" type="search" placeholder="Search for a city" autocomplete="off">
+          <button type="submit">Search</button>
+        </form>
+
+        <p class="status" id="status" role="status" aria-live="polite">Finding your location…</p>
+
+        <div class="hero-body">
+          <div class="col-now">
+            <div class="now" id="now" hidden>
+              <svg class="big-icon" id="nowIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+              <div>
+                <p class="temp" id="temp"></p>
+                <p class="cond" id="cond"></p>
+              </div>
+            </div>
+            <ul class="meta" id="meta"></ul>
+            <div class="sun" id="sun" hidden>
+              <div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19h18M7 19a5 5 0 0 1 10 0M12 4v5M9.5 6.5L12 4l2.5 2.5"/></svg>
+                <span><small>Sunrise</small><strong id="sunrise"></strong></span>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19h18M7 19a5 5 0 0 1 10 0M12 4v5M9.5 6.5L12 9l2.5-2.5"/></svg>
+                <span><small>Sunset</small><strong id="sunset"></strong></span>
+              </div>
+            </div>
+            <p class="updated" id="updated"></p>
+          </div>
+
+          <div class="col-fc" id="forecast" hidden>
+            <h3>Next 24 hours</h3>
+            <div class="hours-wrap">
+              <ul class="hours" id="hours" tabindex="0" aria-label="Hourly forecast, scrolls sideways"></ul>
+            </div>
+            <h3>Next 7 days</h3>
+            <div id="days"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rain radar -->
+    <section class="card radar" id="radarCard" aria-labelledby="radarTitle" hidden>
+      <div class="card-head">
+        <h2 id="radarTitle">Rain radar</h2>
+        <div class="radar-ctl">
+          <span class="state" id="radarTime" aria-live="polite">Loading…</span>
+          <button class="btn quiet small" type="button" id="radarPlay" disabled>Play</button>
+        </div>
+      </div>
+      <div id="radarMap" role="region" aria-label="Rain radar map around your location"></div>
+      <p class="hint">Blue shows rain over the last hour, centered on your weather location. Radar data from RainViewer.</p>
+    </section>
+
+    <div class="grid2">
+      <!-- To-do -->
+      <section class="card" aria-labelledby="todoTitle">
+        <div class="todo-head">
+          <h2 id="todoTitle">To-do</h2>
+          <div class="progress">
+            <span id="ringLabel">No tasks yet</span>
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle class="track" cx="32" cy="32" r="27"/><circle class="bar" id="ringBar" cx="32" cy="32" r="27" stroke-dasharray="169.65" stroke-dashoffset="169.65"/></svg>
+              <span class="ring-text" id="ringText">0%</span>
+            </div>
+          </div>
+        </div>
+        <form class="add" id="addForm">
+          <label class="sr" for="newTask">New task</label>
+          <input class="field" id="newTask" type="text" placeholder="Add a task" autocomplete="off" maxlength="200">
+          <button class="btn" type="submit">Add</button>
+          <div class="opts">
+            <label>Due <input class="field" id="newDue" type="date"></label>
+            <label>Priority
+              <select class="field" id="newPri">
+                <option value="none">None</option>
+                <option value="low">Low</option>
+                <option value="med">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+          </div>
+        </form>
+        <ul class="tasks" id="tasks"></ul>
+        <p class="empty" id="empty" hidden>Nothing on your list. Add your first task above.</p>
+        <div class="tasks-foot" id="tasksFoot" hidden>
+          <span id="left"></span>
+          <button type="button" id="clearDone" hidden>Clear completed</button>
+        </div>
+      </section>
+
+      <!-- Focus timer -->
+      <section class="card focus" aria-labelledby="focusTitle">
+        <div class="card-head"><h2 id="focusTitle">Focus timer</h2></div>
+        <div class="modes" role="group" aria-label="Timer mode">
+          <button type="button" data-mode="focus" aria-pressed="true">Focus</button>
+          <button type="button" data-mode="short" aria-pressed="false">Short break</button>
+          <button type="button" data-mode="long" aria-pressed="false">Long break</button>
+        </div>
+        <div class="dial">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" id="dialBar" cx="60" cy="60" r="54" stroke-dasharray="339.29" stroke-dashoffset="0"/></svg>
+          <div class="dial-in"><div class="dial-time" id="dialTime">25:00</div><div class="dial-sub" id="dialSub">Focus</div></div>
+        </div>
+        <div class="dial-actions">
+          <button class="btn" type="button" id="dialStart">Start</button>
+          <button class="btn quiet" type="button" id="dialReset">Reset</button>
+        </div>
+        <p class="hint" id="focusCount"></p>
+        <p class="sr" id="focusLive" aria-live="polite"></p>
+      </section>
+
+      <!-- Links -->
+      <section class="card" aria-labelledby="linksTitle">
+        <div class="card-head">
+          <h2 id="linksTitle">Daily links</h2>
+          <button class="btn quiet small" type="button" id="editLinks">Edit</button>
+        </div>
+        <div id="linksView">
+          <form class="jump" id="jumpForm" role="search">
+            <label class="sr" for="jump">Search Google or jump to a link</label>
+            <input class="field" id="jump" type="search" placeholder="Search Google or jump to a link" autocomplete="off">
+            <button class="btn" type="submit">Go</button>
+          </form>
+          <p class="jump-hint" id="jumpHint" aria-live="polite"></p>
+          <div id="groups"></div>
+          <p class="hint" id="linksHint">These are placeholders. Choose Edit to add your own.</p>
+        </div>
+        <div id="linksEditor" hidden></div>
+        <datalist id="groupList"></datalist>
+      </section>
+
+      <!-- Notes -->
+      <section class="card notes" aria-labelledby="notesTitle">
+        <div class="card-head">
+          <h2 id="notesTitle">Quick notes</h2>
+          <span class="state" id="noteState" aria-live="polite">Saved</span>
+        </div>
+        <label class="sr" for="notes">Quick notes</label>
+        <textarea class="field" id="notes" placeholder="Jot something down. It saves as you type."></textarea>
+      </section>
+    </div>
+  </main>
+
+  <footer class="quote">
+    <blockquote><p id="quoteText"></p></blockquote>
+    <cite id="quoteBy"></cite>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  const root = document.documentElement;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ================= Theme, accent, time-of-day background ================= */
+  const TOD = {
+    light: [[0,'#C5CEE6'],[5,'#C5CEE6'],[6.5,'#FFD7C0'],[8.5,'#D6EAF8'],[16,'#D6EAF8'],[17.8,'#F9D3AE'],[19.3,'#D2C4E4'],[21,'#C5CEE6'],[24,'#C5CEE6']],
+    dark:  [[0,'#141C3D'],[5,'#141C3D'],[6.5,'#3B2535'],[8.5,'#133149'],[16,'#133149'],[17.8,'#3E2D3C'],[19.3,'#2E2850'],[21,'#141C3D'],[24,'#141C3D']]
+  };
+  const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  function todColor(theme, hour) {
+    const k = TOD[theme];
+    for (let i = 0; i < k.length - 1; i++) {
+      const [h0, c0] = k[i], [h1, c1] = k[i + 1];
+      if (hour >= h0 && hour <= h1) {
+        const t = (hour - h0) / (h1 - h0), a = hexRgb(c0), b = hexRgb(c1);
+        return 'rgb(' + a.map((v, j) => Math.round(v + (b[j] - v) * t)).join(',') + ')';
+      }
+    }
+    return k[0][1];
+  }
+  function applyTod() {
+    const d = new Date();
+    root.style.setProperty('--tod', todColor(root.dataset.theme === 'dark' ? 'dark' : 'light', d.getHours() + d.getMinutes() / 60));
+  }
+
+  const themeBtn = $('#theme');
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    themeBtn.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    applyTod();
+  }
+  applyTheme(root.getAttribute('data-theme') || 'light');
+  themeBtn.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    store.set('dash.theme', next);
+  });
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  const onMedia = (e) => { if (!store.get('dash.theme', null)) applyTheme(e.matches ? 'dark' : 'light'); };
+  if (media.addEventListener) media.addEventListener('change', onMedia); else if (media.addListener) media.addListener(onMedia);
+
+  const palBtn = $('#palBtn'), palMenu = $('#palMenu');
+  const swatches = Array.from(palMenu.querySelectorAll('.swatch'));
+  function markAccent(a) { swatches.forEach((s) => s.setAttribute('aria-pressed', String(s.dataset.accent === a))); }
+  markAccent(root.getAttribute('data-accent') || 'teal');
+  function setPal(open) { palMenu.hidden = !open; palBtn.setAttribute('aria-expanded', String(open)); }
+  palBtn.addEventListener('click', () => setPal(palMenu.hidden));
+  swatches.forEach((s) => s.addEventListener('click', () => {
+    const a = s.dataset.accent;
+    if (a === 'teal') root.removeAttribute('data-accent'); else root.setAttribute('data-accent', a);
+    store.set('dash.accent', a === 'teal' ? null : a);
+    markAccent(a);
+    Sync.touch('prefs');
+  }));
+  document.addEventListener('click', (e) => { if (!palMenu.hidden && !palMenu.contains(e.target) && !palBtn.contains(e.target)) setPal(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !palMenu.hidden) { setPal(false); palBtn.focus(); } });
+
+  /* ================= Clock + greeting ================= */
+  const clockMain = $('#clockMain'), clockSec = $('#clockSec');
+  const defaultIs12 = new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12 !== false;
+  let h12Pref = store.get('dash.h12', null);
+  const use12 = () => (h12Pref === null ? defaultIs12 : !!h12Pref);
+  let timeFmt;
+  const makeTimeFmt = () => { timeFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' }); };
+  makeTimeFmt();
+  let lastMinute = -1, lastDay = '';
+  function tick() {
+    const d = new Date();
+    const parts = timeFmt.formatToParts(d);
+    const get = (t) => (parts.find((p) => p.type === t) || {}).value || '';
+    clockMain.textContent = get('hour') + ':' + get('minute');
+    const period = get('dayPeriod');
+    clockSec.textContent = ':' + pad(d.getSeconds()) + (period ? ' ' + period : '');
+    if (d.getMinutes() !== lastMinute) {
+      lastMinute = d.getMinutes();
+      const h = d.getHours();
+      $('#greeting').textContent = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+      $('#today').textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+      applyTod();
+      const day = ymd(d);
+      if (lastDay && day !== lastDay && typeof renderTasks === 'function') renderTasks();
+      lastDay = day;
+    }
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  /* ================= Weather ================= */
+  const ICONS = {
+    clear:  '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    night:  '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    partly: '<circle cx="8" cy="8" r="2.5"/><path d="M8 2v1.5M2 8h1.5M3.8 3.8l1 1M12.2 3.8l-1 1"/><path d="M9 20h8a3.5 3.5 0 0 0 .5-6.96A4.6 4.6 0 0 0 9.1 13 3.5 3.5 0 0 0 9 20z"/>',
+    nightpartly: '<path d="M11.5 3.3A5.2 5.2 0 1 0 17 10.4 4.2 4.2 0 0 1 11.5 3.3z"/><path d="M9 21h8a3.5 3.5 0 0 0 .5-6.96A4.6 4.6 0 0 0 9.1 14 3.5 3.5 0 0 0 9 21z"/>',
+    cloud:  '<path d="M7 18h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 9.2 4.4 4.4 0 0 0 7 18z"/>',
+    fog:    '<path d="M4 8h16M6 12h12M4 16h16M7 20h10"/>',
+    rain:   '<path d="M7 15h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 6.2 4.4 4.4 0 0 0 7 15z"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/>',
+    snow:   '<path d="M7 15h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 6.2 4.4 4.4 0 0 0 7 15z"/><path d="M8 19v.01M12 20v.01M16 19v.01" stroke-width="2.4"/>',
+    storm:  '<path d="M7 14h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 5.2 4.4 4.4 0 0 0 7 14z"/><path d="M12.5 14l-2.5 4h3.5l-2.5 4"/>'
+  };
+  // returns [sky key, label, icon key]
+  function describe(code, isDay) {
+    const night = isDay === false || isDay === 0;
+    let r;
+    if (code === 0) r = ['clear', 'Clear sky'];
+    else if (code === 1) r = ['clear', 'Mostly clear'];
+    else if (code === 2) r = ['partly', 'Partly cloudy'];
+    else if (code === 3) r = ['cloud', 'Overcast'];
+    else if (code === 45 || code === 48) r = ['fog', 'Fog'];
+    else if (code >= 51 && code <= 57) r = ['rain', 'Drizzle'];
+    else if (code >= 61 && code <= 67) r = ['rain', 'Rain'];
+    else if (code >= 71 && code <= 77) r = ['snow', 'Snow'];
+    else if (code >= 80 && code <= 82) r = ['rain', 'Rain showers'];
+    else if (code === 85 || code === 86) r = ['snow', 'Snow showers'];
+    else if (code >= 95) r = ['storm', 'Thunderstorm'];
+    else r = ['cloud', 'Cloudy'];
+    let icon = r[0];
+    if (night && icon === 'clear') icon = 'night';
+    if (night && icon === 'partly') icon = 'nightpartly';
+    return [r[0], r[1], icon];
+  }
+  const svgIcon = (k) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[k] + '</svg>';
+
+  /* ----- animated sky ----- */
+  const Scene = (function () {
+    const canvas = $('#fx');
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    if (!ctx) return { set() {} };
+    const SCENES = {
+      clear:  { sun: 1,  clouds: 2,  tone: '255,255,255', ca: .35 },
+      partly: { sun: .7, clouds: 6,  tone: '255,255,255', ca: .55 },
+      cloud:  { clouds: 9, tone: '225,232,240', ca: .6 },
+      fog:    { fog: 1, clouds: 4, tone: '230,235,240', ca: .4 },
+      rain:   { clouds: 9, tone: '170,185,200', ca: .6, rain: 130 },
+      snow:   { clouds: 6, tone: '225,232,240', ca: .5, snow: 80 },
+      storm:  { clouds: 10, tone: '120,125,150', ca: .7, rain: 190, bolt: 1 }
+    };
+    const sprites = {};
+    function cloudSprite(rgb) {
+      if (sprites[rgb]) return sprites[rgb];
+      const c = document.createElement('canvas'); c.width = 320; c.height = 160;
+      const x = c.getContext('2d');
+      [[160,95,62],[110,105,48],[212,105,50],[145,70,45],[190,78,40],[75,112,34],[250,114,30]].forEach(([cx, cy, r]) => {
+        const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g.addColorStop(0, 'rgba(' + rgb + ',.9)'); g.addColorStop(.6, 'rgba(' + rgb + ',.45)'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+        x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 6.2832); x.fill();
+      });
+      return (sprites[rgb] = c);
+    }
+    const moon = (function () {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+      const x = c.getContext('2d');
+      x.fillStyle = 'rgba(252,250,235,.95)'; x.beginPath(); x.arc(32, 32, 22, 0, 6.2832); x.fill();
+      x.globalCompositeOperation = 'destination-out';
+      x.beginPath(); x.arc(41, 26, 19, 0, 6.2832); x.fill();
+      return c;
+    })();
+
+    let w = 0, h = 0, cfg = null, P = {}, raf = 0, last = 0, t = 0, visible = true, flash = 0, nextBolt = 5;
+    const rnd = Math.random;
+
+    function build() {
+      P = { clouds: [], rain: [], snow: [], stars: [] };
+      if (!cfg || !w) return;
+      for (let i = 0; i < (cfg.clouds || 0); i++) {
+        const s = .6 + rnd() * 1.1;
+        P.clouds.push({ x: rnd() * (w + 400) - 250, y: rnd() * h * .65 - 20, s, v: (5 + rnd() * 12) * s, a: cfg.ca * (.5 + rnd() * .5) });
+      }
+      for (let i = 0; i < (cfg.rain || 0); i++) P.rain.push({ x: rnd() * (w + 100), y: rnd() * h, l: 10 + rnd() * 14, v: 520 + rnd() * 340 });
+      for (let i = 0; i < (cfg.snow || 0); i++) P.snow.push({ x: rnd() * w, y: rnd() * h, r: 1 + rnd() * 2.2, v: 20 + rnd() * 35, ph: rnd() * 6.28, amp: 8 + rnd() * 18 });
+      for (let i = 0; i < (cfg.stars || 0); i++) P.stars.push({ x: rnd() * w, y: rnd() * h * .8, r: .3 + rnd() * 1.2, ph: rnd() * 6.28, sp: .8 + rnd() * 1.8 });
+    }
+    function resize() {
+      const r = canvas.parentElement.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const nw = Math.round(r.width), nh = Math.round(r.height);
+      if (nw === w && nh === h) return;
+      w = nw; h = nh;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      build(); draw();
+    }
+    function update(dt) {
+      P.clouds.forEach((c) => { c.x += c.v * dt; if (c.x > w + 20) c.x = -320 * c.s; });
+      P.rain.forEach((d) => { d.y += d.v * dt; d.x -= d.v * .18 * dt; if (d.y > h + 20) { d.y = -20; d.x = rnd() * (w + 100); } });
+      P.snow.forEach((f) => { f.y += f.v * dt; if (f.y > h + 5) { f.y = -5; f.x = rnd() * w; } });
+      if (cfg.bolt) {
+        if (flash > 0) flash = Math.max(0, flash - dt * 3.5);
+        nextBolt -= dt;
+        if (nextBolt <= 0) { flash = 1; nextBolt = 4 + rnd() * 7; }
+      }
+    }
+    function draw() {
+      if (!cfg || !w) return;
+      ctx.clearRect(0, 0, w, h);
+      // stars
+      P.stars.forEach((s) => {
+        ctx.globalAlpha = .45 + .5 * Math.sin(t * s.sp + s.ph) * .5 + .05;
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      // Wide layout: sun/moon sits in the empty lower-left of the hero. Narrow layout: top right.
+      const wide = w > 900;
+      const cx = wide ? w * .2 : w * .84, cy = wide ? h * .8 : 64;
+      if (cfg.sun) {
+        const R = Math.min(Math.max(w, h), 760) * .55 * (1 + .03 * Math.sin(t * .5)), i = cfg.sun;
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        g.addColorStop(0, 'rgba(255,236,170,' + (.75 * i) + ')'); g.addColorStop(.22, 'rgba(255,214,120,' + (.32 * i) + ')'); g.addColorStop(1, 'rgba(255,200,100,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(255,248,215,' + (.95 * i) + ')'; ctx.beginPath(); ctx.arc(cx, cy, 34, 0, 6.2832); ctx.fill();
+      }
+      if (cfg.moon) {
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 130);
+        g.addColorStop(0, 'rgba(190,210,255,.28)'); g.addColorStop(1, 'rgba(190,210,255,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(moon, cx - 32, cy - 32);
+      }
+      if (cfg.fog) {
+        const sp = cloudSprite(cfg.tone);
+        for (let i = 0; i < 3; i++) {
+          ctx.globalAlpha = .22;
+          ctx.drawImage(sp, -200 + Math.sin(t * .12 + i * 2) * 70, h * (.25 + i * .22), w + 400, h * .38);
+        }
+      }
+      P.clouds.forEach((c) => { ctx.globalAlpha = c.a; ctx.drawImage(cloudSprite(cfg.tone), c.x, c.y, 320 * c.s, 160 * c.s); });
+      ctx.globalAlpha = 1;
+      if (P.rain.length) {
+        ctx.strokeStyle = 'rgba(215,232,255,.42)'; ctx.lineWidth = 1.2; ctx.beginPath();
+        P.rain.forEach((d) => { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - d.l * .18, d.y + d.l); });
+        ctx.stroke();
+      }
+      if (P.snow.length) {
+        ctx.fillStyle = 'rgba(255,255,255,.85)';
+        P.snow.forEach((f) => { ctx.beginPath(); ctx.arc(f.x + Math.sin(t * .8 + f.ph) * f.amp, f.y, f.r, 0, 6.2832); ctx.fill(); });
+      }
+      if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (flash * .35) + ')'; ctx.fillRect(0, 0, w, h); }
+    }
+    function frame(ts) {
+      raf = 0;
+      if (!cfg || reduceMotion.matches || !visible || document.hidden) return;
+      const dt = Math.min((ts - last) / 1000 || 0, .05); last = ts; t += dt;
+      update(dt); draw();
+      raf = requestAnimationFrame(frame);
+    }
+    function start() {
+      if (raf || reduceMotion.matches || !visible || document.hidden) return;
+      last = performance.now(); raf = requestAnimationFrame(frame);
+    }
+    function set(sky, isDay) {
+      cfg = Object.assign({}, SCENES[sky] || SCENES.clear);
+      if (!isDay) {
+        cfg.sun = 0;
+        if (sky === 'clear' || sky === 'partly') { cfg.stars = sky === 'clear' ? 110 : 50; cfg.moon = 1; }
+        cfg.tone = sky === 'storm' ? '90,95,125' : '150,165,195';
+        cfg.ca *= .6;
+      }
+      flash = 0; nextBolt = 3;
+      resize(); build(); draw(); start();
+    }
+    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas.parentElement); else window.addEventListener('resize', resize);
+    if ('IntersectionObserver' in window) new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) start(); }).observe(canvas);
+    document.addEventListener('visibilitychange', start);
+    const rm = () => { if (reduceMotion.matches) { cancelAnimationFrame(raf); raf = 0; draw(); } else start(); };
+    if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', rm);
+    return { set };
+  })();
+
+  let lastRender = null;
+  const el = {
+    sky: $('#sky'), placeName: $('#placeName'), status: $('#status'), now: $('#now'),
+    nowIcon: $('#nowIcon'), temp: $('#temp'), cond: $('#cond'), meta: $('#meta'), sun: $('#sun'),
+    forecast: $('#forecast'), days: $('#days'), hours: $('#hours'), updated: $('#updated'),
+    search: $('#search'), q: $('#q'), changeCity: $('#changeCity'), useGps: $('#useGps'),
+    alert: $('#alert'), alertText: $('#alertText')
+  };
+
+  function setStatus(msg, isError) {
+    el.status.textContent = msg || '';
+    el.status.className = 'status' + (isError ? ' error' : '');
+    el.status.hidden = !msg;
+  }
+  function hideWeather() {
+    el.now.hidden = true; el.forecast.hidden = true; el.sun.hidden = true;
+    el.meta.innerHTML = ''; el.updated.textContent = ''; el.alert.hidden = true;
+  }
+  function showSearch(show) {
+    el.search.hidden = !show;
+    el.changeCity.setAttribute('aria-expanded', String(show));
+    if (show) el.q.focus();
+  }
+  let unit = store.get('dash.units', 'c') === 'f' ? 'f' : 'c';
+  const cv = (c) => (unit === 'f' ? c * 9 / 5 + 32 : c);
+  const fmtTemp = (n) => Math.round(cv(n));
+  const wind = (kmh) => (unit === 'f' ? Math.round(kmh * 0.621371) + ' mph' : Math.round(kmh) + ' km/h');
+  const fmtHour = (hh) => (use12() ? new Date(2000, 0, 1, hh).toLocaleTimeString([], { hour: 'numeric', hourCycle: 'h12' }) : pad(hh) + ':00');
+  function fmtIso(iso) {
+    const m = /T(\d\d):(\d\d)/.exec(iso || '');
+    return m ? new Date(2000, 0, 1, +m[1], +m[2]).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' }) : '';
+  }
+
+  function buildAlerts(data, start) {
+    const h = data.hourly, out = [];
+    if (!h) return out;
+    const n = h.time.length;
+    let rain = -1, storm = -1;
+    for (let i = 0; i < 6 && start + i < n; i++) {
+      const idx = start + i, code = h.weather_code[idx], pop = h.precipitation_probability ? h.precipitation_probability[idx] : 0;
+      if (code >= 95 && storm < 0) storm = i;
+      if ((pop >= 60 || (code >= 51 && code <= 67) || (code >= 80 && code <= 82)) && rain < 0) rain = i;
+    }
+    const when = (i) => i === 0 ? 'right now' : 'around ' + fmtHour(+h.time[start + i].slice(11, 13));
+    if (storm >= 0) out.push('Thunderstorms are possible ' + when(storm) + '. Plan to stay indoors.');
+    else if (rain >= 0) out.push('Rain is likely ' + when(rain) + '. Take an umbrella.');
+    let maxT = -99, minT = 99, maxW = 0;
+    for (let i = 0; i < 12 && start + i < n; i++) {
+      maxT = Math.max(maxT, h.temperature_2m[start + i]);
+      minT = Math.min(minT, h.temperature_2m[start + i]);
+      if (h.wind_speed_10m) maxW = Math.max(maxW, h.wind_speed_10m[start + i]);
+    }
+    if (maxT >= 35) out.push('It will be hot today, up to ' + fmtTemp(maxT) + '°' + unit.toUpperCase() + '. Drink water and limit time in direct sun.');
+    if (minT <= 0) out.push('Temperatures will drop to ' + fmtTemp(minT) + '°' + unit.toUpperCase() + '. Watch for ice.');
+    if (maxW >= 50) out.push('Strong winds are expected, up to ' + wind(maxW) + '.');
+    return out.slice(0, 2);
+  }
+
+  function render(place, data) {
+    lastRender = { place, data };
+    Radar.setCenter(place.lat, place.lon);
+    const cur = data.current, d = data.daily, hr = data.hourly;
+    const isDay = cur.is_day === 1;
+    const info = describe(cur.weather_code, isDay);
+
+    el.placeName.textContent = place.name;
+    el.sky.setAttribute('data-sky', info[0]);
+    el.sky.setAttribute('data-night', isDay ? '0' : '1');
+    Scene.set(info[0], isDay);
+    el.nowIcon.innerHTML = ICONS[info[2]];
+    el.temp.innerHTML = fmtTemp(cur.temperature_2m) + '<sup>°' + unit.toUpperCase() + '</sup>';
+    el.cond.textContent = info[1];
+
+    el.meta.innerHTML = '';
+    ['Feels like ' + fmtTemp(cur.apparent_temperature) + '°', 'Humidity ' + Math.round(cur.relative_humidity_2m) + '%', 'Wind ' + wind(cur.wind_speed_10m)]
+      .forEach((t) => { const li = document.createElement('li'); li.textContent = t; el.meta.appendChild(li); });
+
+    if (d.sunrise && d.sunset) {
+      $('#sunrise').textContent = fmtIso(d.sunrise[0]);
+      $('#sunset').textContent = fmtIso(d.sunset[0]);
+      el.sun.hidden = false;
+    }
+
+    // Hourly strip
+    let start = 0;
+    el.hours.innerHTML = '';
+    if (hr && hr.time) {
+      const key = (cur.time || '').slice(0, 13);
+      start = Math.max(0, hr.time.findIndex((t) => t.slice(0, 13) === key));
+      for (let i = 0; i < 24 && start + i < hr.time.length; i++) {
+        const idx = start + i, hh = +hr.time[idx].slice(11, 13);
+        const di = describe(hr.weather_code[idx], hr.is_day ? hr.is_day[idx] === 1 : true);
+        const pop = hr.precipitation_probability ? hr.precipitation_probability[idx] : null;
+        const li = document.createElement('li');
+        if (i === 0) li.className = 'now-h';
+        li.innerHTML = '<span class="t"></span>' + svgIcon(di[2]) + '<span class="v"></span><span class="r"></span>';
+        li.querySelector('.t').textContent = i === 0 ? 'Now' : fmtHour(hh);
+        li.querySelector('.v').textContent = fmtTemp(i === 0 ? cur.temperature_2m : hr.temperature_2m[idx]) + '°';
+        li.querySelector('.r').textContent = pop != null && pop >= 20 ? pop + '%' : '';
+        li.setAttribute('aria-label', (i === 0 ? 'Now' : fmtHour(hh)) + ': ' + di[1] + ', ' + fmtTemp(i === 0 ? cur.temperature_2m : hr.temperature_2m[idx]) + ' degrees' + (pop != null && pop >= 20 ? ', ' + pop + ' percent chance of rain' : ''));
+        el.hours.appendChild(li);
+      }
+      el.hours.scrollLeft = 0;
+    }
+
+    // 7-day
+    const min = Math.min.apply(null, d.temperature_2m_min), max = Math.max.apply(null, d.temperature_2m_max), span = Math.max(max - min, 1);
+    el.days.innerHTML = '';
+    d.time.forEach((t, i) => {
+      const di = describe(d.weather_code[i], true);
+      const lo = d.temperature_2m_min[i], hi = d.temperature_2m_max[i];
+      let left = ((lo - min) / span) * 100;
+      const width = Math.max(((hi - lo) / span) * 100, 8);
+      if (left + width > 100) left = 100 - width;
+      const name = i === 0 ? 'Today' : new Date(t + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' });
+      const pop = d.precipitation_probability_max ? d.precipitation_probability_max[i] : null;
+      const row = document.createElement('div');
+      row.className = 'day';
+      row.innerHTML = '<span class="n"></span>' + svgIcon(di[2]) + '<span class="rain"></span><span class="lo"></span>' +
+        '<div class="range" aria-hidden="true"><span style="left:' + left.toFixed(1) + '%;width:' + width.toFixed(1) + '%"></span></div><span class="hi"></span>';
+      row.querySelector('.n').textContent = name;
+      row.querySelector('.rain').textContent = pop == null ? '' : pop + '%';
+      row.querySelector('.lo').textContent = fmtTemp(lo) + '°';
+      row.querySelector('.hi').textContent = fmtTemp(hi) + '°';
+      row.setAttribute('aria-label', name + ': ' + di[1] + ', low ' + fmtTemp(lo) + ', high ' + fmtTemp(hi) + (pop == null ? '' : ', ' + pop + ' percent chance of rain'));
+      el.days.appendChild(row);
+    });
+
+    // Alerts
+    const alerts = buildAlerts(data, start);
+    el.alertText.innerHTML = '';
+    alerts.forEach((a) => { const p = document.createElement('p'); p.textContent = a; el.alertText.appendChild(p); });
+    el.alert.hidden = alerts.length === 0;
+
+    el.now.hidden = false;
+    el.forecast.hidden = false;
+    el.updated.textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' }) + '. Weather data from Open-Meteo.';
+    setStatus('');
+  }
+  $('#alertX').addEventListener('click', () => { el.alert.hidden = true; });
+
+  const getPosition = () => new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) { reject({ code: 0 }); return; }
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 12000, maximumAge: 10 * 60 * 1000 });
+  });
+  function gpsMessage(err) {
+    const c = err && err.code;
+    if (c === 1) return 'Location access is blocked. Search for a city instead, or allow location in your browser settings and choose Use my location.';
+    if (c === 2) return 'Your device could not work out its location. Search for a city instead.';
+    if (c === 3) return 'Finding your location took too long. Try again, or search for a city.';
+    return 'Location is not available in this browser. Search for a city instead.';
+  }
+  const fetchJson = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  function reverseName(lat, lon) {
+    return fetchJson('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=en')
+      .then((d) => { const parts = [d.city || d.locality, d.principalSubdivision || d.countryName].filter(Boolean); return parts.length ? parts.join(', ') : 'Your location'; })
+      .catch(() => 'Your location');
+  }
+
+  let loadId = 0;
+  function loadWeather(place) {
+    const id = ++loadId;
+    hideWeather();
+    el.placeName.textContent = place.name;
+    setStatus('Loading weather…');
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat + '&longitude=' + place.lon +
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day' +
+      '&hourly=temperature_2m,weather_code,precipitation_probability,is_day,wind_speed_10m' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
+      '&timezone=auto&forecast_days=7';
+    return fetchJson(url).then((data) => { if (id === loadId) render(place, data); })
+      .catch(() => { if (id === loadId) setStatus('Could not load the weather. Check your connection, then choose Use my location or search again.', true); });
+  }
+
+  function useGps() {
+    hideWeather();
+    el.placeName.textContent = 'Locating…';
+    setStatus('Finding your location…');
+    return getPosition().then((pos) => {
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      return reverseName(lat, lon).then((name) => { showSearch(false); return loadWeather({ lat, lon, name }); });
+    }, (err) => {
+      const saved = store.get('dash.place', null);
+      if (saved) {
+        return loadWeather(saved).then(() => { if (!el.now.hidden) setStatus('Showing ' + saved.name + ' because your location could not be used.'); });
+      }
+      el.placeName.textContent = 'Choose a location';
+      setStatus(gpsMessage(err), true);
+      showSearch(true);
+    });
+  }
+  el.useGps.addEventListener('click', useGps);
+  el.changeCity.addEventListener('click', () => showSearch(el.search.hidden));
+  el.search.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = el.q.value.trim();
+    if (!q) return;
+    setStatus('Searching for ' + q + '…');
+    fetchJson('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=' + encodeURIComponent(q))
+      .then((r) => {
+        if (!r.results || !r.results.length) { setStatus('No city found for “' + q + '”. Check the spelling or try a nearby larger city.', true); return; }
+        const c = r.results[0];
+        const place = { lat: c.latitude, lon: c.longitude, name: [c.name, c.admin1 || c.country].filter(Boolean).join(', ') };
+        store.set('dash.place', place);
+        showSearch(false); el.q.value = '';
+        return loadWeather(place);
+      })
+      .catch(() => setStatus('Search failed. Check your connection and try again.', true));
+  });
+  useGps();
+
+  /* ================= To-do ================= */
+  const rawTasks = store.get('dash.tasks', []);
+  let tasks = (Array.isArray(rawTasks) ? rawTasks : []).map((t) => ({ id: t.id, text: String(t.text || ''), done: !!t.done, due: t.due || '', pri: t.pri || 'none' }));
+  const listEl = $('#tasks'), emptyEl = $('#empty'), footEl = $('#tasksFoot'), leftEl = $('#left'), clearBtn = $('#clearDone');
+  const input = $('#newTask'), newDue = $('#newDue'), newPri = $('#newPri');
+  const saveTasks = () => { store.set('dash.tasks', tasks); Sync.touch('tasks'); };
+  const PRI = { high: 'High', med: 'Medium', low: 'Low' };
+
+  function dueInfo(due, done) {
+    if (!due) return null;
+    const now = new Date(), today = ymd(now);
+    const tom = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const [y, m, dd] = due.split('-').map(Number);
+    const short = new Date(y, m - 1, dd).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    if (due === today) return { text: 'Due today', cls: 'today' };
+    if (due === ymd(tom)) return { text: 'Due tomorrow', cls: '' };
+    if (due < today) return { text: done ? 'Was due ' + short : 'Overdue, ' + short, cls: done ? '' : 'overdue' };
+    return { text: 'Due ' + short, cls: '' };
+  }
+
+  function renderRing() {
+    const total = tasks.length, done = tasks.filter((t) => t.done).length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    $('#ringBar').setAttribute('stroke-dashoffset', String(169.65 * (1 - (total ? done / total : 0))));
+    $('#ringText').textContent = pct + '%';
+    $('#ringLabel').textContent = total ? done + ' of ' + total + ' done' : 'No tasks yet';
+  }
+
+  function moveTask(id, delta) {
+    const i = tasks.findIndex((t) => t.id === id), j = i + delta;
+    if (i < 0 || j < 0 || j >= tasks.length) return;
+    const [t] = tasks.splice(i, 1); tasks.splice(j, 0, t);
+    saveTasks(); renderTasks();
+    const g = listEl.querySelector('[data-id="' + id + '"] .grip'); if (g) g.focus();
+  }
+
+  function startDrag(e, li) {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    // Listen on the document, not the handle: moving the row in the DOM would otherwise drop pointer capture mid-drag.
+    const handle = document;
+    li.classList.add('dragging');
+    const move = (ev) => {
+      const y = ev.clientY;
+      const sibs = Array.from(listEl.children).filter((x) => x !== li);
+      let before = null;
+      for (const s of sibs) { const r = s.getBoundingClientRect(); if (y < r.top + r.height / 2) { before = s; break; } }
+      if (before) { if (li.nextSibling !== before) listEl.insertBefore(li, before); }
+      else if (listEl.lastChild !== li) listEl.appendChild(li);
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      const order = Array.from(listEl.children).map((x) => Number(x.dataset.id));
+      tasks.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+      saveTasks(); renderTasks();
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  }
+
+  function renderTasks() {
+    listEl.innerHTML = '';
+    tasks.forEach((t) => {
+      const li = document.createElement('li');
+      li.className = 'task' + (t.done ? ' done' : '');
+      li.dataset.id = t.id;
+
+      const grip = document.createElement('button');
+      grip.type = 'button'; grip.className = 'grip';
+      grip.setAttribute('aria-label', 'Reorder: ' + t.text + '. Drag, or use the up and down arrow keys.');
+      grip.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1.4"/><circle cx="11" cy="3" r="1.4"/><circle cx="5" cy="8" r="1.4"/><circle cx="11" cy="8" r="1.4"/><circle cx="5" cy="13" r="1.4"/><circle cx="11" cy="13" r="1.4"/></svg>';
+      grip.addEventListener('pointerdown', (e) => startDrag(e, li));
+      grip.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') { e.preventDefault(); moveTask(t.id, -1); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); moveTask(t.id, 1); }
+      });
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.id = 't' + t.id; cb.checked = t.done;
+      cb.addEventListener('change', () => { t.done = cb.checked; saveTasks(); renderTasks(); });
+
+      const body = document.createElement('div'); body.className = 'task-body';
+      const lab = document.createElement('label'); lab.htmlFor = cb.id; lab.textContent = t.text;
+      const tags = document.createElement('div'); tags.className = 'tags';
+      const di = dueInfo(t.due, t.done);
+      if (di) { const s = document.createElement('span'); s.className = 'tag ' + di.cls; s.textContent = di.text; tags.appendChild(s); }
+      if (PRI[t.pri]) { const s = document.createElement('span'); s.className = 'tag p-' + t.pri; s.textContent = PRI[t.pri] + ' priority'; tags.appendChild(s); }
+      body.appendChild(lab); body.appendChild(tags);
+
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'del'; del.setAttribute('aria-label', 'Delete task: ' + t.text);
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      del.addEventListener('click', () => { tasks = tasks.filter((x) => x.id !== t.id); saveTasks(); renderTasks(); input.focus(); });
+
+      li.appendChild(grip); li.appendChild(cb); li.appendChild(body); li.appendChild(del);
+      listEl.appendChild(li);
+    });
+    const open = tasks.filter((t) => !t.done).length, done = tasks.length - open;
+    emptyEl.hidden = tasks.length > 0;
+    footEl.hidden = tasks.length === 0;
+    leftEl.textContent = open === 0 ? 'All done' : open + (open === 1 ? ' task left' : ' tasks left');
+    clearBtn.hidden = done === 0;
+    renderRing();
+  }
+  $('#addForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    tasks.push({ id: Date.now() + Math.floor(Math.random() * 1000), text, done: false, due: newDue.value || '', pri: newPri.value });
+    saveTasks(); renderTasks();
+    input.value = ''; newDue.value = ''; newPri.value = 'none'; input.focus();
+  });
+  clearBtn.addEventListener('click', () => { tasks = tasks.filter((t) => !t.done); saveTasks(); renderTasks(); });
+  renderTasks();
+
+  /* ================= Focus timer ================= */
+  const MODES = { focus: { sec: 25 * 60, label: 'Focus' }, short: { sec: 5 * 60, label: 'Short break' }, long: { sec: 15 * 60, label: 'Long break' } };
+  const dialTime = $('#dialTime'), dialSub = $('#dialSub'), dialBar = $('#dialBar'), startBtn = $('#dialStart'), live = $('#focusLive');
+  const modeBtns = Array.from(document.querySelectorAll('.modes button'));
+  const baseTitle = document.title;
+  let mode = 'focus', remaining = MODES.focus.sec * 1000, running = false, endAt = 0, timer = 0, audioCtx = null;
+  const sessions = () => { const s = store.get('dash.sessions', {}); return s.date === ymd(new Date()) ? s.count : 0; };
+
+  const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
+  function drawDial() {
+    const total = MODES[mode].sec * 1000;
+    dialTime.textContent = fmtClock(remaining);
+    dialSub.textContent = MODES[mode].label + (running ? '' : remaining < total ? ' (paused)' : '');
+    dialBar.setAttribute('stroke-dashoffset', String(339.29 * (1 - remaining / total)));
+    startBtn.textContent = running ? 'Pause' : remaining < total ? 'Resume' : 'Start';
+    const n = sessions();
+    $('#focusCount').textContent = n ? n + (n === 1 ? ' focus session' : ' focus sessions') + ' finished today' : 'No focus sessions finished today yet.';
+    document.title = running ? fmtClock(remaining) + ' · ' + MODES[mode].label : baseTitle;
+  }
+  function setMode(m) {
+    mode = m; running = false; clearInterval(timer);
+    remaining = MODES[m].sec * 1000;
+    modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+    drawDial();
+  }
+  function beep() {
+    try {
+      if (!audioCtx) return;
+      [0, .25, .5].forEach((d) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        const t0 = audioCtx.currentTime + d;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(.25, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .2);
+        o.start(t0); o.stop(t0 + .22);
+      });
+    } catch (e) {}
+  }
+  function finish() {
+    clearInterval(timer); running = false;
+    beep();
+    let next;
+    if (mode === 'focus') {
+      const n = sessions() + 1;
+      store.set('dash.sessions', { date: ymd(new Date()), count: n });
+      next = n % 4 === 0 ? 'long' : 'short';
+      live.textContent = 'Focus session finished. Time for a ' + (next === 'long' ? '15' : '5') + ' minute break.';
+    } else {
+      next = 'focus';
+      live.textContent = 'Break finished. Ready for the next focus session.';
+    }
+    setMode(next);
+  }
+  function loop() {
+    remaining = endAt - Date.now();
+    if (remaining <= 0) { remaining = 0; finish(); return; }
+    drawDial();
+  }
+  startBtn.addEventListener('click', () => {
+    if (!audioCtx) { try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audioCtx = new AC(); } catch (e) {} }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (running) { running = false; clearInterval(timer); remaining = Math.max(0, endAt - Date.now()); drawDial(); return; }
+    running = true; endAt = Date.now() + remaining;
+    clearInterval(timer); timer = setInterval(loop, 250);
+    live.textContent = ''; drawDial();
+  });
+  $('#dialReset').addEventListener('click', () => setMode(mode));
+  modeBtns.forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  drawDial();
+
+  /* ================= Links ================= */
+  const DEFAULT_LINKS = [
+    { name: 'Gmail', url: 'https://mail.google.com', group: 'Work' },
+    { name: 'Calendar', url: 'https://calendar.google.com', group: 'Work' },
+    { name: 'Drive', url: 'https://drive.google.com', group: 'Work' },
+    { name: 'GitHub', url: 'https://github.com', group: 'Work' },
+    { name: 'YouTube', url: 'https://www.youtube.com', group: 'Personal' },
+    { name: 'Spotify', url: 'https://open.spotify.com', group: 'Personal' },
+    { name: 'News', url: 'https://news.google.com', group: 'Personal' },
+    { name: 'Maps', url: 'https://maps.google.com', group: 'Personal' }
+  ];
+  let savedLinks = store.get('dash.links', null);
+  let customised = Array.isArray(savedLinks);
+  let links = (customised ? savedLinks : DEFAULT_LINKS).map((l) => ({ name: l.name || '', url: l.url || '', group: l.group || 'Links' }));
+
+  const groupsEl = $('#groups'), editorEl = $('#linksEditor'), viewEl = $('#linksView'), hintEl = $('#linksHint'), editBtn = $('#editLinks');
+  const jump = $('#jump'), jumpHint = $('#jumpHint');
+  let editing = false;
+
+  const normUrl = (u) => { u = (u || '').trim(); return !u ? '' : /^https?:\/\//i.test(u) ? u : 'https://' + u; };
+  const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } };
+  function saveLinks() { customised = true; store.set('dash.links', links); Sync.touch('links'); }
+
+  function makeBadge(name, u) {
+    const b = document.createElement('span'); b.className = 'badge'; b.setAttribute('aria-hidden', 'true');
+    const letter = () => { b.classList.add('letter'); b.textContent = (name || hostOf(u) || '?').charAt(0).toUpperCase(); };
+    const host = hostOf(u);
+    if (!u || !host || host.indexOf('.') < 0) { letter(); return b; }
+    const img = new Image();
+    img.alt = ''; img.width = 24; img.height = 24; img.loading = 'lazy';
+    img.onerror = () => { img.remove(); letter(); };
+    img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(host) + '&sz=64';
+    b.appendChild(img);
+    return b;
+  }
+
+  function renderLinks() {
+    groupsEl.innerHTML = '';
+    const order = [];
+    links.forEach((l, i) => { if (!(l.name || l.url)) return; if (order.indexOf(l.group) < 0) order.push(l.group); });
+    order.forEach((g) => {
+      const sec = document.createElement('div'); sec.className = 'group';
+      const h = document.createElement('h3'); h.textContent = g;
+      const ul = document.createElement('ul'); ul.className = 'links';
+      links.forEach((l, i) => {
+        if (l.group !== g || !(l.name || l.url)) return;
+        const u = normUrl(l.url);
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = u || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.dataset.i = i;
+        const t = document.createElement('span'); t.className = 'link-text';
+        const s1 = document.createElement('strong'); s1.textContent = l.name || hostOf(u);
+        const s2 = document.createElement('small'); s2.textContent = hostOf(u);
+        t.appendChild(s1); t.appendChild(s2);
+        a.appendChild(makeBadge(l.name, u)); a.appendChild(t); li.appendChild(a); ul.appendChild(li);
+      });
+      sec.appendChild(h); sec.appendChild(ul); groupsEl.appendChild(sec);
+    });
+    hintEl.hidden = customised;
+    updateJump();
+  }
+
+  // Quick search: jump to a link by name, otherwise search Google
+  function matchLink(q) {
+    q = q.trim().toLowerCase();
+    if (!q) return null;
+    return links.find((l) => l.name.trim().toLowerCase() === q) || links.find((l) => l.name.trim().toLowerCase().startsWith(q)) || null;
+  }
+  function updateJump() {
+    const q = jump.value.trim(), m = matchLink(q);
+    groupsEl.querySelectorAll('a.match').forEach((a) => a.classList.remove('match'));
+    if (m) { const a = groupsEl.querySelector('a[data-i="' + links.indexOf(m) + '"]'); if (a) a.classList.add('match'); }
+    jumpHint.textContent = !q ? '' : m ? 'Press Enter to open ' + m.name + '.' : 'Press Enter to search Google for “' + q + '”.';
+  }
+  jump.addEventListener('input', updateJump);
+  $('#jumpForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = jump.value.trim();
+    if (!q) return;
+    const m = matchLink(q), u = m && normUrl(m.url);
+    window.open(u || 'https://www.google.com/search?q=' + encodeURIComponent(q), '_blank', 'noopener');
+    jump.value = ''; updateJump();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (/INPUT|TEXTAREA|SELECT/.test(tag) || (document.activeElement && document.activeElement.isContentEditable)) return;
+    e.preventDefault(); jump.focus();
+  });
+
+  function renderGroupList() {
+    const dl = $('#groupList'); dl.innerHTML = '';
+    Array.from(new Set(links.map((l) => l.group).filter(Boolean))).forEach((g) => { const o = document.createElement('option'); o.value = g; dl.appendChild(o); });
+  }
+  function renderEditor() {
+    editorEl.innerHTML = '';
+    links.forEach((l, i) => {
+      const row = document.createElement('div'); row.className = 'edit-row';
+      const mk = (cls, val, ph, label) => { const x = document.createElement('input'); x.className = 'field ' + cls; x.type = 'text'; x.value = val; x.placeholder = ph; x.setAttribute('aria-label', 'Link ' + (i + 1) + ' ' + label); return x; };
+      const n = mk('', l.name, 'Name', 'name'); n.maxLength = 40;
+      const u = mk('url', l.url, 'https://', 'address'); u.inputMode = 'url';
+      const g = mk('grp', l.group, 'Group', 'group'); g.maxLength = 24; g.setAttribute('list', 'groupList');
+      const d = document.createElement('button'); d.type = 'button'; d.className = 'del';
+      d.setAttribute('aria-label', 'Remove link ' + (l.name || i + 1));
+      d.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      n.addEventListener('input', () => { l.name = n.value; saveLinks(); });
+      u.addEventListener('input', () => { l.url = u.value; saveLinks(); });
+      g.addEventListener('input', () => { l.group = g.value.trim() || 'Links'; saveLinks(); renderGroupList(); });
+      d.addEventListener('click', () => { links.splice(i, 1); saveLinks(); renderEditor(); });
+      row.appendChild(n); row.appendChild(u); row.appendChild(g); row.appendChild(d);
+      editorEl.appendChild(row);
+    });
+    const act = document.createElement('div'); act.className = 'edit-actions';
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'btn quiet small'; add.textContent = 'Add link';
+    add.addEventListener('click', () => {
+      links.push({ name: '', url: '', group: (links[links.length - 1] || {}).group || 'Links' }); saveLinks(); renderEditor(); renderGroupList();
+      const rows = editorEl.querySelectorAll('.edit-row'); rows[rows.length - 1].querySelector('input').focus();
+    });
+    act.appendChild(add); editorEl.appendChild(act);
+    renderGroupList();
+  }
+  editBtn.addEventListener('click', () => {
+    editing = !editing;
+    editBtn.textContent = editing ? 'Done' : 'Edit';
+    viewEl.hidden = editing; editorEl.hidden = !editing;
+    if (editing) renderEditor();
+    else { links = links.filter((l) => l.name.trim() || l.url.trim()); if (customised) { store.set('dash.links', links); Sync.touch('links'); } renderLinks(); }
+  });
+  renderLinks();
+
+  /* ================= Notes ================= */
+  const notes = $('#notes'), noteState = $('#noteState');
+  notes.value = store.get('dash.notes', '') || '';
+  let noteTimer = 0;
+  notes.addEventListener('input', () => {
+    noteState.textContent = 'Saving…';
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { store.set('dash.notes', notes.value); noteState.textContent = 'Saved'; noteTimer = 0; Sync.touch('notes'); }, 400);
+  });
+  let restoring = false;
+  window.addEventListener('beforeunload', () => { if (noteTimer && !restoring) { store.set('dash.notes', notes.value); Sync.touch('notes'); } });
+
+  /* ================= Rain radar ================= */
+  const Radar = (function () {
+    const card = $('#radarCard'), mapEl = $('#radarMap'), playBtn = $('#radarPlay'), timeEl = $('#radarTime');
+    let map = null, marker = null, base = null, frames = [], layers = {}, idx = -1, timer = 0, host = '', fetchedAt = 0, preloaded = false;
+    const BASE = {
+      light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    };
+    const clockFmt = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' });
+
+    function makeBase() {
+      if (base) map.removeLayer(base);
+      base = L.tileLayer(BASE[root.dataset.theme === 'dark' ? 'dark' : 'light'], {
+        subdomains: 'abcd', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(map);
+      base.bringToBack();
+    }
+    function stop() { clearInterval(timer); timer = 0; playBtn.textContent = 'Play'; }
+    function layerFor(i) {
+      if (!layers[i]) {
+        layers[i] = L.tileLayer(host + frames[i].path + '/512/{z}/{x}/{y}/2/1_1.png', {
+          tileSize: 512, zoomOffset: -1, maxNativeZoom: 8, maxZoom: 8, opacity: 0, zIndex: 10, updateWhenZooming: false
+        }).addTo(map);
+      }
+      return layers[i];
+    }
+    function show(i) {
+      const l = layerFor(i);
+      Object.keys(layers).forEach((k) => { if (+k !== i) layers[k].setOpacity(0); });
+      l.setOpacity(0.7);
+      idx = i;
+      timeEl.textContent = clockFmt(frames[i].time) + (i === frames.length - 1 ? ' (latest)' : '');
+    }
+    // Keep requests low: drop the other frames whenever the map moves.
+    function prune() {
+      stop(); preloaded = false;
+      Object.keys(layers).forEach((k) => { if (+k !== idx) { map.removeLayer(layers[k]); delete layers[k]; } });
+    }
+    function loadFrames() {
+      fetchedAt = Date.now();
+      timeEl.textContent = 'Loading…';
+      fetch('https://api.rainviewer.com/public/weather-maps.json')
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then((j) => {
+          host = j.host || 'https://tilecache.rainviewer.com';
+          frames = ((j.radar && j.radar.past) || []).slice(-6);
+          if (!frames.length) throw new Error('no frames');
+          Object.keys(layers).forEach((k) => { map.removeLayer(layers[k]); delete layers[k]; });
+          show(frames.length - 1);
+          playBtn.disabled = false;
+        })
+        .catch(() => { fetchedAt = 0; timeEl.textContent = 'Radar is unavailable right now.'; playBtn.disabled = true; });
+    }
+    function init(lat, lon) {
+      card.hidden = false;
+      if (typeof L === 'undefined') {
+        mapEl.innerHTML = '<p class="msg">The radar map could not load. Check your connection and reload the page.</p>';
+        timeEl.textContent = '';
+        return false;
+      }
+      map = L.map(mapEl, { center: [lat, lon], zoom: 6, minZoom: 3, maxZoom: 8, worldCopyJump: true, zoomAnimation: !reduceMotion.matches });
+      makeBase();
+      marker = L.circleMarker([lat, lon], { radius: 7, weight: 3, color: '#ffffff', fillColor: '#E5484D', fillOpacity: 1 }).addTo(map);
+      map.on('movestart', prune);
+      new MutationObserver(makeBase).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+      loadFrames();
+      return true;
+    }
+    playBtn.addEventListener('click', () => {
+      if (timer) { stop(); return; }
+      if (!frames.length) return;
+      playBtn.textContent = 'Pause';
+      const run = () => {
+        let i = 0; show(i);
+        timer = setInterval(() => {
+          i += 1; show(i);
+          if (i >= frames.length - 1) stop();
+        }, 700);
+      };
+      if (!preloaded) {
+        preloaded = true;
+        frames.forEach((f, i) => layerFor(i));
+        timeEl.textContent = 'Loading frames…';
+        timer = setTimeout(run, 2200);
+      } else run();
+    });
+    return {
+      setCenter(lat, lon) {
+        if (typeof lat !== 'number' || typeof lon !== 'number') return;
+        if (!map) { if (typeof L === 'undefined' && mapEl.firstChild) return; init(lat, lon); return; }
+        map.setView([lat, lon], map.getZoom(), { animate: false });
+        marker.setLatLng([lat, lon]);
+        if (Date.now() - fetchedAt > 5 * 60 * 1000) loadFrames();
+      }
+    };
+  })();
+
+  /* ================= Settings: units, clock, backup ================= */
+  const unitBtns = Array.from(palMenu.querySelectorAll('[data-unit]'));
+  const clockBtns = Array.from(palMenu.querySelectorAll('[data-h12]'));
+  function markSettings() {
+    unitBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.unit === unit)));
+    clockBtns.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.h12 === 'true') === use12())));
+  }
+  markSettings();
+  unitBtns.forEach((b) => b.addEventListener('click', () => {
+    unit = b.dataset.unit; store.set('dash.units', unit); markSettings(); Sync.touch('prefs');
+    if (lastRender) render(lastRender.place, lastRender.data);
+  }));
+  clockBtns.forEach((b) => b.addEventListener('click', () => {
+    h12Pref = b.dataset.h12 === 'true'; store.set('dash.h12', h12Pref); markSettings(); Sync.touch('prefs');
+    makeTimeFmt(); lastMinute = -1; tick();
+    if (lastRender) render(lastRender.place, lastRender.data);
+  }));
+
+  const BACKUP_KEYS = ['dash.tasks', 'dash.notes', 'dash.links', 'dash.place', 'dash.theme', 'dash.accent', 'dash.units', 'dash.h12', 'dash.sessions'];
+  const backupMsg = $('#backupMsg'), restoreAsk = $('#restoreAsk'), importFile = $('#importFile');
+  let pendingRestore = null;
+  $('#exportBtn').addEventListener('click', () => {
+    const data = {};
+    BACKUP_KEYS.forEach((k) => { const v = store.get(k, undefined); if (v !== undefined) data[k] = v; });
+    data['dash.notes'] = notes.value;
+    const blob = new Blob([JSON.stringify({ app: 'dashboard', version: 1, exportedAt: new Date().toISOString(), data }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'dashboard-backup-' + ymd(new Date()) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    restoreAsk.hidden = true;
+    backupMsg.textContent = 'Backup saved to your downloads folder.';
+  });
+  $('#importBtn').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const f = importFile.files && importFile.files[0];
+    importFile.value = '';
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const o = JSON.parse(String(rd.result));
+        if (!o || o.app !== 'dashboard' || !o.data || typeof o.data !== 'object') throw new Error('bad');
+        const clean = {};
+        BACKUP_KEYS.forEach((k) => { if (k in o.data) clean[k] = o.data[k]; });
+        if (('dash.tasks' in clean && !Array.isArray(clean['dash.tasks'])) || ('dash.links' in clean && !Array.isArray(clean['dash.links'])) || ('dash.notes' in clean && typeof clean['dash.notes'] !== 'string')) throw new Error('bad');
+        pendingRestore = clean; restoreAsk.hidden = false; backupMsg.textContent = '';
+      } catch (e) {
+        pendingRestore = null; restoreAsk.hidden = true;
+        backupMsg.textContent = 'That file is not a dashboard backup.';
+      }
+    };
+    rd.onerror = () => { backupMsg.textContent = 'Could not read that file. Try again.'; };
+    rd.readAsText(f);
+  });
+  $('#restoreNo').addEventListener('click', () => { pendingRestore = null; restoreAsk.hidden = true; });
+  $('#restoreYes').addEventListener('click', () => {
+    if (!pendingRestore) return;
+    restoring = true;
+    const stamp = Date.now();
+    store.set('dash.syncMeta', { tasks: stamp, notes: stamp, links: stamp, prefs: stamp });
+    BACKUP_KEYS.forEach((k) => {
+      if (k in pendingRestore) store.set(k, pendingRestore[k]);
+      else { try { localStorage.removeItem(k); } catch (e) {} }
+    });
+    location.reload();
+  });
+
+  /* ================= Sync (optional, your own Supabase project) ================= */
+  const Sync = (function () {
+    const SECTIONS = ['tasks', 'notes', 'links', 'prefs'];
+    const ACCENTS = ['teal', 'blue', 'violet', 'rose', 'amber'];
+    let cfg = store.get('dash.sync', null);
+    if (!cfg || !cfg.url || !cfg.key || !cfg.code) cfg = null;
+    let meta = store.get('dash.syncMeta', {}) || {};
+    let running = false, again = false, pushTimer = 0, pollTimer = 0;
+    const ui = {
+      offBox: $('#syncOffBox'), onBox: $('#syncOnBox'), status: $('#syncStatus'), msg: $('#syncMsg'),
+      url: $('#syncUrl'), key: $('#syncKey'), paste: $('#syncPaste'), code: $('#syncCode')
+    };
+    const validCfg = (u, k, c) => typeof u === 'string' && /^https:\/\/[^\s/]+\/?$/.test(u) && typeof k === 'string' && k.length > 20 && typeof c === 'string' && /^[a-f0-9]{32,}$/.test(c);
+    const clockNow = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' });
+
+    function setStatus(text, bad) { ui.status.textContent = text; ui.status.style.color = bad ? 'var(--danger)' : ''; }
+    function showUi() {
+      ui.offBox.hidden = !!cfg; ui.onBox.hidden = !cfg;
+      if (cfg) ui.code.value = 'dash1.' + btoa(JSON.stringify({ u: cfg.url, k: cfg.key, c: cfg.code }));
+    }
+
+    // ----- what this device holds for each section -----
+    function getLocal(s) {
+      if (s === 'tasks') return tasks;
+      if (s === 'notes') return notes.value;
+      if (s === 'links') return customised ? links : null;
+      return { accent: store.get('dash.accent', null) || 'teal', units: unit, h12: h12Pref };
+    }
+    function hasContent(s) {
+      if (s === 'tasks') return tasks.length > 0;
+      if (s === 'notes') return notes.value.length > 0;
+      if (s === 'links') return customised;
+      return !!store.get('dash.accent', null) || unit !== 'c' || h12Pref !== null;
+    }
+    // ----- apply a newer remote section; returns true when applied -----
+    function apply(s, v) {
+      if (s === 'tasks') {
+        if (!Array.isArray(v)) return false;
+        tasks = v.map((t) => ({ id: t.id, text: String(t.text || ''), done: !!t.done, due: t.due || '', pri: t.pri || 'none' }));
+        store.set('dash.tasks', tasks); renderTasks(); return true;
+      }
+      if (s === 'notes') {
+        if (typeof v !== 'string' || noteTimer) return false;
+        if (notes.value !== v) notes.value = v;
+        store.set('dash.notes', v); return true;
+      }
+      if (s === 'links') {
+        if (!Array.isArray(v) || editing) return false;
+        links = v.map((l) => ({ name: String(l.name || ''), url: String(l.url || ''), group: String(l.group || 'Links') }));
+        customised = true; store.set('dash.links', links); renderLinks(); return true;
+      }
+      if (!v || typeof v !== 'object') return false;
+      if ('accent' in v && ACCENTS.indexOf(v.accent) >= 0) {
+        if (v.accent === 'teal') root.removeAttribute('data-accent'); else root.setAttribute('data-accent', v.accent);
+        store.set('dash.accent', v.accent === 'teal' ? null : v.accent); markAccent(v.accent);
+      }
+      if (v.units === 'c' || v.units === 'f') { unit = v.units; store.set('dash.units', unit); }
+      if (typeof v.h12 === 'boolean' || v.h12 === null) { h12Pref = v.h12; store.set('dash.h12', h12Pref); makeTimeFmt(); lastMinute = -1; tick(); }
+      markSettings();
+      if (lastRender) render(lastRender.place, lastRender.data);
+      return true;
+    }
+    // ----- per-section "newest wins" merge -----
+    function merge(remote) {
+      const rem = remote && typeof remote === 'object' ? remote : {};
+      const doc = {}; let push = false;
+      SECTIONS.forEach((s) => {
+        const r = rem[s], rt = r && typeof r.t === 'number' ? r.t : -1, lt = meta[s] || 0;
+        if (rt > lt) { if (apply(s, r.v)) { meta[s] = rt; doc[s] = r; } else if (r) doc[s] = r; }
+        else if (lt > 0 && lt > rt) { doc[s] = { v: getLocal(s), t: lt }; push = true; }
+        else if (r) doc[s] = r;
+      });
+      store.set('dash.syncMeta', meta);
+      return { doc, push };
+    }
+
+    // ----- network -----
+    function rpc(fn, body) {
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
+      const headers = { 'Content-Type': 'application/json', apikey: cfg.key };
+      if (/^eyJ/.test(cfg.key)) headers.Authorization = 'Bearer ' + cfg.key;
+      return fetch(cfg.url.replace(/\/+$/, '') + '/rest/v1/rpc/' + fn, { method: 'POST', headers, body: JSON.stringify(body), signal: ctl.signal })
+        .then((r) => {
+          if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+          return r.status === 204 ? null : r.text().then((t) => (t ? JSON.parse(t) : null));
+        })
+        .finally(() => clearTimeout(to));
+    }
+    function failText(e) {
+      if (e && (e.status === 401 || e.status === 403)) return 'The sync server rejected the key. Check the public key in settings.';
+      if (e && e.status === 404) return 'Sync is not set up in that project yet. Run the setup SQL, then try again.';
+      return 'Could not reach the sync server. Your changes are saved on this device and will sync when it is back.';
+    }
+    async function run() {
+      if (!cfg) return;
+      if (running) { again = true; return; }
+      running = true; setStatus('Syncing…');
+      try {
+        const remote = await rpc('get_dashboard', { p_code: cfg.code });
+        const m = merge(remote);
+        if (m.push) await rpc('put_dashboard', { p_code: cfg.code, p_data: m.doc });
+        setStatus('Synced at ' + clockNow() + '.');
+      } catch (e) {
+        setStatus(failText(e), true);
+      } finally {
+        running = false;
+        if (again) { again = false; schedule(300); }
+      }
+    }
+    function schedule(ms) { clearTimeout(pushTimer); pushTimer = setTimeout(run, ms); }
+    function startPolling() { clearInterval(pollTimer); pollTimer = setInterval(() => { if (!document.hidden) run(); }, 30000); }
+
+    // ----- turning on / off -----
+    function enable(c) {
+      cfg = c; store.set('dash.sync', cfg);
+      SECTIONS.forEach((s) => { if (!meta[s] && hasContent(s)) meta[s] = 1; });
+      store.set('dash.syncMeta', meta);
+      showUi(); startPolling(); run();
+    }
+    function randomCode() { const b = new Uint8Array(24); crypto.getRandomValues(b); return Array.from(b, (x) => pad(x.toString(16)).slice(-2)).join(''); }
+    $('#syncTurnOn').addEventListener('click', () => {
+      const url = ui.url.value.trim().replace(/\/+$/, ''), key = ui.key.value.trim();
+      const code = randomCode();
+      if (!validCfg(url, key, code)) { ui.msg.textContent = 'Enter the project URL (starting with https://) and the public key.'; return; }
+      ui.msg.textContent = ''; enable({ url, key, code });
+    });
+    $('#syncJoin').addEventListener('click', () => {
+      try {
+        const s = ui.paste.value.trim();
+        if (s.indexOf('dash1.') !== 0) throw new Error('bad');
+        const o = JSON.parse(atob(s.slice(6)));
+        if (!validCfg(o.u, o.k, o.c)) throw new Error('bad');
+        ui.msg.textContent = ''; ui.paste.value = ''; enable({ url: o.u.replace(/\/+$/, ''), key: o.k, code: o.c });
+      } catch (e) { ui.msg.textContent = 'That setup code is not valid. Copy it again from your other device.'; }
+    });
+    $('#syncNow').addEventListener('click', run);
+    $('#syncTurnOff').addEventListener('click', () => {
+      cfg = null; store.set('dash.sync', null); clearInterval(pollTimer); clearTimeout(pushTimer);
+      ui.msg.textContent = 'Sync is off. Your data stays on this device and on the server.'; showUi();
+    });
+    $('#syncCopy').addEventListener('click', () => {
+      const done = () => setStatus('Setup code copied.');
+      const fallback = () => { ui.code.focus(); ui.code.select(); setStatus('Press Ctrl+C or Cmd+C to copy the selected code.'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ui.code.value).then(done, fallback); else fallback();
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && cfg) run(); });
+    window.addEventListener('online', () => { if (cfg) run(); });
+
+    showUi();
+    if (cfg) { startPolling(); run(); }
+    return {
+      touch(s) {
+        meta[s] = Date.now(); store.set('dash.syncMeta', meta);
+        if (cfg) schedule(1500);
+      }
+    };
+  })();
+
+  /* ================= Daily quote ================= */
+  const QUOTES = [
+    ['However long the night, the dawn will break.', 'African proverb'],
+    ['If you want to go fast, go alone. If you want to go far, go together.', 'African proverb'],
+    ['Smooth seas do not make skillful sailors.', 'African proverb'],
+    ['Fall seven times, stand up eight.', 'Japanese proverb'],
+    ['A journey of a thousand miles begins with a single step.', 'Lao Tzu'],
+    ['The best way out is always through.', 'Robert Frost'],
+    ['The only way to do great work is to love what you do.', 'Steve Jobs'],
+    ['We are what we repeatedly do. Excellence, then, is not an act, but a habit.', 'Will Durant'],
+    ['Little by little, one travels far.', 'Proverb'],
+    ['What stands in the way becomes the way.', 'Marcus Aurelius'],
+    ['Knowledge is like a garden: if it is not cultivated, it cannot be harvested.', 'African proverb'],
+    ['Well begun is half done.', 'Proverb'],
+    ['Wealth consists not in having great possessions, but in having few wants.', 'Epictetus'],
+    ['When there is no enemy within, the enemies outside cannot hurt you.', 'African proverb']
+  ];
+  (function () {
+    const now = new Date();
+    const dayNum = Math.floor((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+    const q = QUOTES[dayNum % QUOTES.length];
+    $('#quoteText').textContent = '“' + q[0] + '”';
+    $('#quoteBy').textContent = q[1];
+  })();
+})();
+</script>
+</body>
+</html>
