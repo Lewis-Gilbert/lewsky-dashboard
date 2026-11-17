@@ -540,3 +540,21 @@ html[data-welcome] .welcome { display: flex; }
 
 /* Dark map: OpenStreetMap has no dark style, so darken its tiles (radar layers are unaffected) */
 .leaflet-layer.base-dark { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.7); }
+
+/* ---------- Feedback round: empty weather state, due shortcuts, retry, confetti, note tools ---------- */
+.hero.is-empty .hero-in { padding-bottom: 20px; }
+.hero.is-empty .status { margin-top: 10px; }
+.hero.is-empty .hero-body { display: none; }
+.hero.is-empty { border-radius: 26px; }
+.status.error { max-width: 560px; }
+.retry { margin-top: 10px; }
+.qd { min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  background: var(--quiet-bg); color: var(--ink); border: 1.5px solid var(--quiet-line); }
+.qd:hover { border-color: var(--muted); }
+.add .opts input[type="date"] { min-width: 150px; cursor: pointer; }
+.note-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+.note-btns { display: flex; gap: 8px; }
+.focus { position: relative; overflow: hidden; }
+.confetti { position: absolute; top: 38%; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; z-index: 5; animation: confettiFall 1.8s cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes confettiFall { from { opacity: 1; transform: translate(0, 0) rotate(0); } to { opacity: 0; transform: translate(var(--dx), 260px) rotate(var(--r)); } }
+@media (pointer: coarse) { .qd { min-height: 44px; padding: 0 14px; } .note-tools .btn { min-height: 44px; } }

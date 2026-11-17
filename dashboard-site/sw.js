@@ -1,6 +1,6 @@
 /* Lewsky service worker: lets the app open offline.
    Bump CACHE when you change any file so installed copies update. */
-const CACHE = 'lewsky-v2';
+const CACHE = 'lewsky-v3';
 const SHELL = ['./', 'index.html', 'css/styles.css', 'js/theme-init.js', 'js/app.js', 'js/pwa.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 const LIBS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];

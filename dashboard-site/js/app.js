@@ -314,11 +314,16 @@
     alert: $('#alert'), alertText: $('#alertText')
   };
 
-  function setStatus(msg, isError) {
+  let retryFn = null;
+  function setStatus(msg, isError, retry) {
     el.status.textContent = msg || '';
     el.status.className = 'status' + (isError ? ' error' : '');
     el.status.hidden = !msg;
+    retryFn = retry || null;
+    $('#retryBtn').hidden = !retryFn;
+    el.sky.classList.toggle('is-empty', !!msg && el.now.hidden);
   }
+  $('#retryBtn').addEventListener('click', () => { if (retryFn) retryFn(); });
   function hideWeather() {
     el.now.hidden = true; el.forecast.hidden = true; el.sun.hidden = true;
     el.meta.innerHTML = ''; el.updated.textContent = ''; el.alert.hidden = true;
@@ -450,6 +455,7 @@
 
     el.now.hidden = false;
     el.forecast.hidden = false;
+    el.sky.classList.remove('is-empty');
     const hb = $('#heroBody');
     hb.classList.remove('enter');
     if (animate && !reduceMotion.matches) { void hb.offsetWidth; hb.classList.add('enter'); }
@@ -469,7 +475,18 @@
     if (c === 3) return 'Finding your location took too long. Try again, or search for a city.';
     return 'Location is not available in this browser. Search for a city instead.';
   }
-  const fetchJson = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  const fetchJson = (url) => fetch(url).then((r) => { if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; } return r.json(); });
+  // One automatic retry for busy or flaky responses (network errors, 429, 5xx)
+  const fetchRetry = (url) => fetchJson(url).catch((e) => {
+    if (e.status && e.status < 500 && e.status !== 429) throw e;
+    return new Promise((res) => setTimeout(res, 1800)).then(() => fetchJson(url));
+  });
+  function failReason(e) {
+    if (navigator.onLine === false) return 'You appear to be offline.';
+    if (e && e.status === 429) return 'The weather service is busy right now. Wait a minute and try again.';
+    if (e && e.status) return 'The weather service had a problem (error ' + e.status + ').';
+    return 'The weather service did not answer. This can be your connection or a blocker on this browser.';
+  }
   function reverseName(lat, lon) {
     return fetchJson('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=en')
       .then((d) => { const parts = [d.city || d.locality, d.principalSubdivision || d.countryName].filter(Boolean); return parts.length ? parts.join(', ') : 'Your location'; })
@@ -488,8 +505,23 @@
       '&hourly=temperature_2m,weather_code,precipitation_probability,is_day,wind_speed_10m' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
       '&timezone=auto&forecast_days=7';
-    return fetchJson(url).then((data) => { if (id === loadId) render(place, data); })
-      .catch(() => { if (id === loadId) setStatus('Could not load the weather. Check your connection, then choose Use my location or search again.', true); });
+    return fetchRetry(url).then((data) => {
+      if (id !== loadId) return;
+      store.set('dash.wcache', { place, data, ts: Date.now() });
+      render(place, data);
+    }).catch((e) => {
+      if (id !== loadId) return;
+      const retry = () => loadWeather(place);
+      const c = store.get('dash.wcache', null);
+      if (c && c.data && c.place && Math.abs(c.place.lat - place.lat) < 0.1 && Math.abs(c.place.lon - place.lon) < 0.1) {
+        render(place, c.data);
+        const at = new Date(c.ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' });
+        setStatus('Showing saved weather from ' + at + '. ' + failReason(e), false, retry);
+        el.updated.textContent = 'Saved copy. Weather data from Open-Meteo.';
+      } else {
+        setStatus('Weather is unavailable for ' + place.name + '. ' + failReason(e), true, retry);
+      }
+    });
   }
 
   function useGps() {
@@ -525,7 +557,7 @@
         showSearch(false); el.q.value = '';
         return loadWeather(place);
       })
-      .catch(() => setStatus('Search failed. Check your connection and try again.', true));
+      .catch((e) => setStatus('Search failed. ' + failReason(e), true, () => el.search.requestSubmit()));
   });
   useGps();
 
@@ -534,6 +566,11 @@
   let tasks = (Array.isArray(rawTasks) ? rawTasks : []).map((t) => ({ id: t.id, text: String(t.text || ''), done: !!t.done, due: t.due || '', pri: t.pri || 'none' }));
   const listEl = $('#tasks'), emptyEl = $('#empty'), footEl = $('#tasksFoot'), leftEl = $('#left'), clearBtn = $('#clearDone');
   const input = $('#newTask'), newDue = $('#newDue'), newPri = $('#newPri');
+  document.querySelectorAll('.qd').forEach((b) => b.addEventListener('click', () => {
+    const d = new Date(); d.setDate(d.getDate() + Number(b.dataset.due));
+    newDue.value = ymd(d); newDue.dispatchEvent(new Event('change'));
+  }));
+  newDue.addEventListener('click', () => { try { newDue.showPicker(); } catch (e) {} });
   const saveTasks = () => { store.set('dash.tasks', tasks); Sync.touch('tasks'); };
   const PRI = { high: 'High', med: 'Medium', low: 'Low' };
 
@@ -554,6 +591,7 @@
     const pct = total ? Math.round((done / total) * 100) : 0;
     $('#ringBar').setAttribute('stroke-dashoffset', String(169.65 * (1 - (total ? done / total : 0))));
     $('#ringText').textContent = pct + '%';
+    document.querySelector('.ring-wrap').hidden = !total;
     $('#ringLabel').textContent = total ? done + ' of ' + total + ' done' : 'No tasks yet';
   }
 
@@ -663,7 +701,8 @@
     dialBar.setAttribute('stroke-dashoffset', String(339.29 * (1 - remaining / total)));
     startBtn.textContent = running ? 'Pause' : remaining < total ? 'Resume' : 'Start';
     const n = sessions();
-    $('#focusCount').textContent = n ? n + (n === 1 ? ' focus session' : ' focus sessions') + ' finished today' : 'No focus sessions finished today yet.';
+    const sk = streak();
+    $('#focusCount').textContent = (n ? n + (n === 1 ? ' focus session' : ' focus sessions') + ' finished today' : 'No focus sessions finished today yet.') + (sk > 1 ? ' · ' + sk + '-day streak' : '');
     document.title = running ? fmtClock(remaining) + ' · ' + MODES[mode].label : baseTitle;
     $('#focusCard').classList.toggle('running', running);
   }
@@ -685,6 +724,21 @@
       });
     } catch (e) {}
   }
+  const streak = () => { const s = store.get('dash.streak', null); if (!s) return 0; const y = new Date(); y.setDate(y.getDate() - 1); return (s.last === ymd(new Date()) || s.last === ymd(y)) ? s.n : 0; };
+  function bumpStreak() {
+    const s = store.get('dash.streak', null), today = ymd(new Date()), y = new Date(); y.setDate(y.getDate() - 1);
+    if (s && s.last === today) return;
+    store.set('dash.streak', { last: today, n: s && s.last === ymd(y) ? s.n + 1 : 1 });
+  }
+  function confetti() {
+    if (reduceMotion.matches) return;
+    const card = $('#focusCard'), colors = ['#FFC72E', '#3B82E0', '#E5484D', '#12B76A', '#9B6BFF', '#FF8A3D'];
+    for (let i = 0; i < 28; i++) {
+      const s = document.createElement('i'); s.className = 'confetti';
+      s.style.cssText = 'left:' + (10 + Math.random() * 80) + '%;background:' + colors[i % colors.length] + ';--dx:' + ((Math.random() - .5) * 160) + 'px;--r:' + (Math.random() * 720 - 360) + 'deg;animation-delay:' + (Math.random() * .25) + 's';
+      card.appendChild(s); setTimeout(() => s.remove(), 2200);
+    }
+  }
   function finish() {
     clearInterval(timer); running = false;
     beep();
@@ -692,6 +746,7 @@
     if (mode === 'focus') {
       const n = sessions() + 1;
       store.set('dash.sessions', { date: ymd(new Date()), count: n });
+      bumpStreak(); confetti();
       next = n % 4 === 0 ? 'long' : 'short';
       live.textContent = 'Focus session finished. Time for a ' + (next === 'long' ? '15' : '5') + ' minute break.';
     } else {
@@ -851,10 +906,29 @@
   const notes = $('#notes'), noteState = $('#noteState');
   notes.value = store.get('dash.notes', '') || '';
   let noteTimer = 0;
+  const noteCount = $('#noteCount');
+  const countNotes = () => { const n = notes.value.length; noteCount.textContent = n.toLocaleString() + (n === 1 ? ' character' : ' characters'); };
+  countNotes();
   notes.addEventListener('input', () => {
+    countNotes();
     noteState.textContent = 'Saving…';
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => { store.set('dash.notes', notes.value); noteState.textContent = 'Saved'; noteTimer = 0; Sync.touch('notes'); }, 400);
+  });
+  $('#noteCopy').addEventListener('click', () => {
+    const b = $('#noteCopy'), done = (t) => { b.textContent = t; setTimeout(() => { b.textContent = 'Copy'; }, 1500); };
+    if (!notes.value) { done('Nothing to copy'); return; }
+    const fallback = () => { notes.select(); try { document.execCommand('copy'); done('Copied'); } catch (e) { done('Could not copy'); } };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(notes.value).then(() => done('Copied'), fallback); else fallback();
+  });
+  let clearTimerId = 0;
+  $('#noteClear').addEventListener('click', () => {
+    const b = $('#noteClear');
+    if (!notes.value) return;
+    if (!clearTimerId) { b.textContent = 'Tap again to clear'; clearTimerId = setTimeout(() => { b.textContent = 'Clear'; clearTimerId = 0; }, 3000); return; }
+    clearTimeout(clearTimerId); clearTimerId = 0; b.textContent = 'Clear';
+    notes.value = ''; clearTimeout(noteTimer); noteTimer = 0;
+    store.set('dash.notes', ''); Sync.touch('notes'); noteState.textContent = 'Cleared'; countNotes();
   });
   let restoring = false;
   window.addEventListener('beforeunload', () => { if (noteTimer && !restoring) { store.set('dash.notes', notes.value); Sync.touch('notes'); } });
@@ -971,7 +1045,7 @@
     if (lastRender) render(lastRender.place, lastRender.data);
   }));
 
-  const BACKUP_KEYS = ['dash.tasks', 'dash.notes', 'dash.links', 'dash.place', 'dash.theme', 'dash.accent', 'dash.units', 'dash.h12', 'dash.sessions', 'dash.name'];
+  const BACKUP_KEYS = ['dash.tasks', 'dash.notes', 'dash.links', 'dash.place', 'dash.theme', 'dash.accent', 'dash.units', 'dash.h12', 'dash.sessions', 'dash.streak', 'dash.name'];
   const backupMsg = $('#backupMsg'), restoreAsk = $('#restoreAsk'), importFile = $('#importFile');
   let pendingRestore = null;
   $('#exportBtn').addEventListener('click', () => {

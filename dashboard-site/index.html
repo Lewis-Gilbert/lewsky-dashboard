@@ -164,6 +164,7 @@
         </form>
 
         <p class="status" id="status" role="status" aria-live="polite">Finding your location…</p>
+        <button class="chip retry" type="button" id="retryBtn" hidden>Try again</button>
 
         <div class="hero-body" id="heroBody">
           <div class="col-now">
@@ -232,6 +233,9 @@
           <button class="btn" type="submit">Add</button>
           <div class="opts">
             <label>Due <input class="field" id="newDue" type="date"></label>
+            <button class="qd" type="button" data-due="0">Today</button>
+            <button class="qd" type="button" data-due="1">Tomorrow</button>
+            <button class="qd" type="button" data-due="7">Next week</button>
             <label>Priority
               <select class="field" id="newPri">
                 <option value="none">None</option>
@@ -298,6 +302,13 @@
         </div>
         <label class="sr" for="notes">Quick notes</label>
         <textarea class="field" id="notes" placeholder="Jot something down. It saves as you type."></textarea>
+        <div class="note-tools">
+          <span id="noteCount" aria-live="off">0 characters</span>
+          <span class="note-btns">
+            <button class="btn quiet small" type="button" id="noteCopy">Copy</button>
+            <button class="btn quiet small" type="button" id="noteClear">Clear</button>
+          </span>
+        </div>
       </section>
     </div>
   </main>
