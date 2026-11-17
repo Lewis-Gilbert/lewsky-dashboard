@@ -863,16 +863,13 @@
   const Radar = (function () {
     const card = $('#radarCard'), mapEl = $('#radarMap'), playBtn = $('#radarPlay'), timeEl = $('#radarTime');
     let map = null, marker = null, base = null, frames = [], layers = {}, idx = -1, timer = 0, host = '', fetchedAt = 0, preloaded = false;
-    const BASE = {
-      light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    };
     const clockFmt = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' });
 
     function makeBase() {
       if (base) map.removeLayer(base);
-      base = L.tileLayer(BASE[root.dataset.theme === 'dark' ? 'dark' : 'light'], {
-        subdomains: 'abcd', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, className: root.dataset.theme === 'dark' ? 'base-dark' : '',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
       base.bringToBack();
     }

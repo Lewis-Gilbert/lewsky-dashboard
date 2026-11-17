@@ -537,3 +537,6 @@ html[data-welcome] .welcome { display: flex; }
 @media (prefers-reduced-motion: reduce) { .welcome-card { animation: none; } }
 .name-row { display: flex; gap: 6px; margin-bottom: 8px; }
 .name-row .field { min-height: 38px; padding: 6px 10px; font-size: 14px; flex: 1; min-width: 0; }
+
+/* Dark map: OpenStreetMap has no dark style, so darken its tiles (radar layers are unaffected) */
+.leaflet-layer.base-dark { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.7); }
