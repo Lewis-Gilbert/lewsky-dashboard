@@ -87,7 +87,7 @@
     if (d.getMinutes() !== lastMinute) {
       lastMinute = d.getMinutes();
       const h = d.getHours();
-      const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+      const part = h >= 5 && h < 12 ? 'Good morning' : h >= 12 && h < 17 ? 'Good afternoon' : h >= 17 && h < 21 ? 'Good evening' : 'Good night';
       $('#greeting').textContent = userName ? part + ', ' + userName : part;
       $('#welcomeTime').textContent = part;
       if (iconsReady) setGreetIcon(h);
@@ -494,11 +494,11 @@
       .catch(() => 'Your location');
   }
 
-  let loadId = 0;
+  let loadId = 0, showingCache = false;
   function loadWeather(place) {
     const id = ++loadId;
     animateNext = true;
-    hideWeather();
+    if (!showingCache) hideWeather();
     el.placeName.textContent = place.name;
     setStatus('Loading weather…');
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat + '&longitude=' + place.lon +
@@ -508,10 +508,12 @@
       '&timezone=auto&forecast_days=7';
     return fetchRetry(url).then((data) => {
       if (id !== loadId) return;
+      showingCache = false;
       store.set('dash.wcache', { place, data, ts: Date.now() });
       render(place, data);
     }).catch((e) => {
       if (id !== loadId) return;
+      showingCache = false;
       const retry = () => loadWeather(place);
       const c = store.get('dash.wcache', null);
       if (c && c.data && c.place && Math.abs(c.place.lat - place.lat) < 0.1 && Math.abs(c.place.lon - place.lon) < 0.1) {
@@ -537,17 +539,19 @@
       if (saved) {
         return loadWeather(saved).then(() => { if (!el.now.hidden) setStatus('Showing ' + saved.name + ' because your location could not be used.'); });
       }
+      if (showingCache) { showingCache = false; setStatus('Showing your last weather. ' + gpsMessage(err), false); showSearch(true); return; }
       el.placeName.textContent = 'Choose a location';
       setStatus(gpsMessage(err), true);
       showSearch(true);
     });
   }
-  el.useGps.addEventListener('click', useGps);
+  el.useGps.addEventListener('click', () => { showingCache = false; useGps(); });
   el.changeCity.addEventListener('click', () => showSearch(el.search.hidden));
   el.search.addEventListener('submit', (e) => {
     e.preventDefault();
     const q = el.q.value.trim();
     if (!q) return;
+    showingCache = false; hideWeather();
     setStatus('Searching for ' + q + '…');
     fetchJson('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=' + encodeURIComponent(q))
       .then((r) => {
@@ -743,6 +747,12 @@
   function notify(title, body) {
     try { if ('Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification(title, { body, icon: 'icons/icon-192.png' }); } catch (e) {}
   }
+  let doneTimer = 0;
+  function showDone(msg) {
+    const d = $('#focusDone'); d.textContent = '\u2713 ' + msg; d.hidden = false;
+    d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop');
+    clearTimeout(doneTimer); doneTimer = setTimeout(() => { d.hidden = true; }, 6000);
+  }
   function finish() {
     clearInterval(timer); running = false;
     beep();
@@ -752,12 +762,14 @@
       store.set('dash.sessions', { date: ymd(new Date()), count: n });
       bumpStreak(); confetti();
       notify('Focus session finished', 'Nice work. Time for a break.');
+      showDone('Session complete. Nice work!');
       next = n % 4 === 0 ? 'long' : 'short';
       live.textContent = 'Focus session finished. Time for a ' + (next === 'long' ? '15' : '5') + ' minute break.';
     } else {
       next = 'focus';
       live.textContent = 'Break finished. Ready for the next focus session.';
       notify('Break finished', 'Ready for the next focus session?');
+      showDone('Break over. Ready when you are.');
     }
     setMode(next);
   }
@@ -837,7 +849,7 @@
       });
       sec.appendChild(h); sec.appendChild(ul); groupsEl.appendChild(sec);
     });
-    hintEl.hidden = customised;
+    hintEl.hidden = customised || store.get('dash.hintSeen', false);
     updateJump();
   }
 
@@ -911,7 +923,7 @@
     editing = !editing;
     editBtn.textContent = editing ? 'Done' : 'Edit';
     viewEl.hidden = editing; editorEl.hidden = !editing;
-    if (editing) renderEditor();
+    if (editing) { store.set('dash.hintSeen', true); hintEl.hidden = true; renderEditor(); }
     else { links = links.filter((l) => l.name.trim() || l.url.trim()); if (customised) { store.set('dash.links', links); Sync.touch('links'); } renderLinks(); }
   });
   renderLinks();
@@ -950,7 +962,7 @@
   /* ================= Rain radar ================= */
   const Radar = (function () {
     const card = $('#radarCard'), mapEl = $('#radarMap'), playBtn = $('#radarPlay'), timeEl = $('#radarTime');
-    let map = null, marker = null, base = null, frames = [], layers = {}, idx = -1, timer = 0, host = '', fetchedAt = 0, preloaded = false;
+    let open = true, pending = null, map = null, marker = null, base = null, frames = [], layers = {}, idx = -1, timer = 0, host = '', fetchedAt = 0, preloaded = false;
     const clockFmt = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' });
 
     function makeBase() {
@@ -1033,10 +1045,18 @@
     return {
       setCenter(lat, lon) {
         if (typeof lat !== 'number' || typeof lon !== 'number') return;
+        pending = [lat, lon];
+        if (!open) { card.hidden = false; return; }
         if (!map) { if (typeof L === 'undefined' && mapEl.firstChild) return; init(lat, lon); return; }
         map.setView([lat, lon], map.getZoom(), { animate: false });
         marker.setLatLng([lat, lon]);
         if (Date.now() - fetchedAt > 5 * 60 * 1000) loadFrames();
+      },
+      setOpen(v) {
+        open = v;
+        if (!open) { stop(); return; }
+        if (!map && pending) init(pending[0], pending[1]);
+        else if (map) { map.invalidateSize(); if (pending) { map.setView(pending, map.getZoom(), { animate: false }); marker.setLatLng(pending); } if (Date.now() - fetchedAt > 5 * 60 * 1000) loadFrames(); }
       }
     };
   })();
@@ -1300,6 +1320,36 @@
         if (cfg) schedule(1500);
       }
     };
+  })();
+
+  /* ================= Collapsible sections (remembered) ================= */
+  const uiPrefs = (() => { const v = store.get('dash.ui', null); return v && typeof v === 'object' ? v : {}; })();
+  const narrow = window.matchMedia('(max-width: 900px)').matches;
+  const secDefaults = { hours: true, days: !narrow, radar: !narrow };
+  const secState = { hours: uiPrefs.hours !== undefined ? !!uiPrefs.hours : secDefaults.hours, days: uiPrefs.days !== undefined ? !!uiPrefs.days : secDefaults.days, radar: uiPrefs.radar !== undefined ? !!uiPrefs.radar : secDefaults.radar };
+  function applySections(save) {
+    $('#hoursBox').hidden = !secState.hours; $('#hoursToggle').setAttribute('aria-expanded', String(secState.hours));
+    $('#days').hidden = !secState.days; $('#daysToggle').setAttribute('aria-expanded', String(secState.days));
+    $('#radarBody').hidden = !secState.radar; $('#radarToggle').setAttribute('aria-expanded', String(secState.radar));
+    $('#radarToggle').textContent = secState.radar ? 'Hide radar' : 'Show radar';
+    $('#radarPlay').hidden = !secState.radar;
+    if (save) store.set('dash.ui', secState);
+  }
+  applySections(false);
+  Radar.setOpen(secState.radar);
+  [['hoursToggle', 'hours'], ['daysToggle', 'days']].forEach(([id, k]) => $('#' + id).addEventListener('click', () => { secState[k] = !secState[k]; applySections(true); }));
+  $('#radarToggle').addEventListener('click', () => { secState.radar = !secState.radar; applySections(true); Radar.setOpen(secState.radar); });
+
+  /* ================= Show the last weather at once while a fresh one loads ================= */
+  (function paintCached() {
+    const c = store.get('dash.wcache', null);
+    if (!c || !c.data || !c.place || !el.now.hidden) return;
+    try {
+      showingCache = true;
+      render(c.place, c.data);
+      const at = new Date(c.ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hourCycle: use12() ? 'h12' : 'h23' });
+      setStatus('Showing saved weather from ' + at + '. Updating…');
+    } catch (e) { showingCache = false; hideWeather(); }
   })();
 
   /* ================= Daily quote ================= */

@@ -564,3 +564,20 @@ html[data-welcome] .welcome { display: flex; }
 .icon-btn.nudge svg { animation: gearTurn 1.8s ease-in-out 3; }
 @keyframes gearTurn { 50% { transform: rotate(60deg); } }
 @media (prefers-reduced-motion: reduce) { .icon-btn.nudge, .icon-btn.nudge svg { animation: none; } }
+
+/* ---------- Collapsible sections, focus banner ---------- */
+.col-fc h3 { margin: 14px 0 8px; }
+.sec-toggle { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 18px; padding: 4px 8px 4px 0; border-radius: 10px; text-shadow: inherit; }
+.sec-toggle:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.sec-toggle .chev { width: 20px; height: 20px; transition: transform .25s ease; }
+.sec-toggle[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+@media (pointer: coarse) { .sec-toggle { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { .sec-toggle .chev { transition: none; } }
+.focus-done { margin: 10px 0 0; padding: 10px 14px; border-radius: 14px; font-weight: 700; text-align: center; background: #D6F5E3; color: #0B5A33; }
+:root[data-theme="dark"] .focus-done { background: #12432C; color: #BFF3D6; }
+.focus-done.pop { animation: donePop .5s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes donePop { from { transform: scale(.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .focus-done.pop { animation: none; } }
+.radar .card-head { flex-wrap: wrap; row-gap: 10px; }
+.radar-ctl { flex-wrap: wrap; row-gap: 8px; min-width: 0; }
+@media (max-width: 420px) { .radar-ctl { width: 100%; justify-content: space-between; } }

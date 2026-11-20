@@ -194,11 +194,13 @@
           </div>
 
           <div class="col-fc" id="forecast" hidden>
-            <h3>Next 24 hours</h3>
-            <div class="hours-wrap">
-              <ul class="hours" id="hours" tabindex="0" aria-label="Hourly forecast, scrolls sideways"></ul>
+            <h3><button class="sec-toggle" type="button" id="hoursToggle" aria-expanded="true" aria-controls="hoursBox">Next 24 hours<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h3>
+            <div id="hoursBox">
+              <div class="hours-wrap">
+                <ul class="hours" id="hours" tabindex="0" aria-label="Hourly forecast, scrolls sideways"></ul>
+              </div>
             </div>
-            <h3>Next 7 days</h3>
+            <h3><button class="sec-toggle" type="button" id="daysToggle" aria-expanded="true" aria-controls="days">Next 7 days<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h3>
             <div id="days"></div>
           </div>
         </div>
@@ -212,10 +214,13 @@
         <div class="radar-ctl">
           <span class="state" id="radarTime" aria-live="polite">Loading…</span>
           <button class="btn quiet small" type="button" id="radarPlay" disabled>Play</button>
+          <button class="btn quiet small" type="button" id="radarToggle" aria-expanded="true" aria-controls="radarBody">Hide radar</button>
         </div>
       </div>
-      <div id="radarMap" role="region" aria-label="Rain radar map around your location"></div>
-      <p class="hint">Blue shows rain over the last hour, centered on your weather location. Radar data from RainViewer.</p>
+      <div id="radarBody">
+        <div id="radarMap" role="region" aria-label="Rain radar map around your location"></div>
+        <p class="hint">Blue shows rain over the last hour, centered on your weather location. Radar data from RainViewer.</p>
+      </div>
     </section>
 
     <div class="grid2">
@@ -274,6 +279,7 @@
           <button class="btn" type="button" id="dialStart">Start</button>
           <button class="btn quiet" type="button" id="dialReset">Reset</button>
         </div>
+        <p class="focus-done" id="focusDone" role="status" hidden></p>
         <p class="hint" id="focusCount"></p>
         <p class="sr" id="focusLive" aria-live="polite"></p>
       </section>
