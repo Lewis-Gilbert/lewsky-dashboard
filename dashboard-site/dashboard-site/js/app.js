@@ -53,7 +53,8 @@
   function markAccent(a) { swatches.forEach((s) => s.setAttribute('aria-pressed', String(s.dataset.accent === a))); }
   markAccent(root.getAttribute('data-accent') || 'teal');
   function setPal(open) { palMenu.hidden = !open; palBtn.setAttribute('aria-expanded', String(open)); }
-  palBtn.addEventListener('click', () => setPal(palMenu.hidden));
+  if (!store.get('dash.seenSettings', false) && !reduceMotion.matches) palBtn.classList.add('nudge');
+  palBtn.addEventListener('click', () => { palBtn.classList.remove('nudge'); store.set('dash.seenSettings', true); setPal(palMenu.hidden); });
   swatches.forEach((s) => s.addEventListener('click', () => {
     const a = s.dataset.accent;
     if (a === 'teal') root.removeAttribute('data-accent'); else root.setAttribute('data-accent', a);
@@ -739,6 +740,9 @@
       card.appendChild(s); setTimeout(() => s.remove(), 2200);
     }
   }
+  function notify(title, body) {
+    try { if ('Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification(title, { body, icon: 'icons/icon-192.png' }); } catch (e) {}
+  }
   function finish() {
     clearInterval(timer); running = false;
     beep();
@@ -747,11 +751,13 @@
       const n = sessions() + 1;
       store.set('dash.sessions', { date: ymd(new Date()), count: n });
       bumpStreak(); confetti();
+      notify('Focus session finished', 'Nice work. Time for a break.');
       next = n % 4 === 0 ? 'long' : 'short';
       live.textContent = 'Focus session finished. Time for a ' + (next === 'long' ? '15' : '5') + ' minute break.';
     } else {
       next = 'focus';
       live.textContent = 'Break finished. Ready for the next focus session.';
+      notify('Break finished', 'Ready for the next focus session?');
     }
     setMode(next);
   }
@@ -763,6 +769,7 @@
   startBtn.addEventListener('click', () => {
     if (!audioCtx) { try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audioCtx = new AC(); } catch (e) {} }
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if ('Notification' in window && Notification.permission === 'default') { try { Notification.requestPermission(); } catch (e) {} }
     if (running) { running = false; clearInterval(timer); remaining = Math.max(0, endAt - Date.now()); drawDial(); return; }
     running = true; endAt = Date.now() + remaining;
     clearInterval(timer); timer = setInterval(loop, 250);
@@ -854,6 +861,13 @@
     const m = matchLink(q), u = m && normUrl(m.url);
     window.open(u || 'https://www.google.com/search?q=' + encodeURIComponent(q), '_blank', 'noopener');
     jump.value = ''; updateJump();
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.key !== 'n' && e.key !== 't') || e.ctrlKey || e.metaKey || e.altKey) return;
+    const a = document.activeElement, tag = (a && a.tagName) || '';
+    if (/INPUT|TEXTAREA|SELECT|BUTTON|A/.test(tag) || (a && a.isContentEditable)) return;
+    e.preventDefault();
+    if (e.key === 'n') { input.focus(); input.scrollIntoView({ block: 'center' }); } else startBtn.click();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;

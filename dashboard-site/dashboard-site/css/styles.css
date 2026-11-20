@@ -558,3 +558,9 @@ html[data-welcome] .welcome { display: flex; }
 .confetti { position: absolute; top: 38%; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; z-index: 5; animation: confettiFall 1.8s cubic-bezier(.2, .7, .3, 1) forwards; }
 @keyframes confettiFall { from { opacity: 1; transform: translate(0, 0) rotate(0); } to { opacity: 0; transform: translate(var(--dx), 260px) rotate(var(--r)); } }
 @media (pointer: coarse) { .qd { min-height: 44px; padding: 0 14px; } .note-tools .btn { min-height: 44px; } }
+
+.icon-btn.nudge { animation: gearNudge 1.8s ease-in-out 3; }
+@keyframes gearNudge { 0%, 100% { box-shadow: 0 0 0 0 rgba(18, 183, 106, 0); } 50% { box-shadow: 0 0 0 9px rgba(18, 183, 106, .28); } }
+.icon-btn.nudge svg { animation: gearTurn 1.8s ease-in-out 3; }
+@keyframes gearTurn { 50% { transform: rotate(60deg); } }
+@media (prefers-reduced-motion: reduce) { .icon-btn.nudge, .icon-btn.nudge svg { animation: none; } }
